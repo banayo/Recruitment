@@ -1,0 +1,92 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}คำขอ #{{ requisition.pk }}{% endblock %}
+{% block nav_requisitions %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container narrow">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">คำขอ #{{ requisition.pk }}</h1>
+        <p class="page-copy">
+          <span class="badge badge-{{ requisition.status }}">{{ requisition.get_status_display }}</span>
+          · {{ requisition.get_priority_display }}
+        </p>
+      </div>
+      <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">กลับรายการ</a>
+    </div>
+
+    <dl class="detail-grid">
+      <div>
+        <dt>ผู้ขอ</dt>
+        <dd>{{ requisition.requester.nickname|default:requisition.requester.person_unid }} ({{ requisition.requester.person_unid }})</dd>
+      </div>
+      <div>
+        <dt>ผู้อนุมัติ (approver_unid)</dt>
+        <dd>{{ requisition.approver_unid }}</dd>
+      </div>
+      <div>
+        <dt>จำนวนที่ขอ</dt>
+        <dd>{{ requisition.required_headcount }}</dd>
+      </div>
+      <div>
+        <dt>จำนวนที่อนุมัติ</dt>
+        <dd>{{ requisition.approved_headcount }}</dd>
+      </div>
+      <div>
+        <dt>วันที่ต้องการ</dt>
+        <dd>{{ requisition.required_date|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt>ตำแหน่ง</dt>
+        <dd>{{ requisition.position|default:"ยังไม่ผูก" }}</dd>
+      </div>
+      <div>
+        <dt>ซิงก์โควตาแล้ว</dt>
+        <dd>{{ requisition.is_headcount_synced|yesno:"ใช่,ยังไม่" }}</dd>
+      </div>
+      <div>
+        <dt>สร้างเมื่อ</dt>
+        <dd>{{ requisition.created_at|date:"d/m/Y H:i" }}</dd>
+      </div>
+    </dl>
+
+    {% if can_decide %}
+      <div class="panel">
+        <h2 class="panel-title">การอนุมัติ</h2>
+        <form method="post" action="{% url 'recruitment:requisition_approve' requisition.pk %}" class="stack-form">
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="{{ decide_form.approved_headcount.id_for_label }}">{{ decide_form.approved_headcount.label }}</label>
+            {{ decide_form.approved_headcount }}
+          </div>
+          <div class="cta-group">
+            <button type="submit" class="btn btn-primary">อนุมัติ</button>
+          </div>
+        </form>
+        <form method="post" action="{% url 'recruitment:requisition_reject' requisition.pk %}" class="stack-form" style="margin-top: 12px;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ink">ปฏิเสธ</button>
+        </form>
+      </div>
+    {% endif %}
+
+    {% if is_hr_user and hr_form %}
+      <div class="panel">
+        <h2 class="panel-title">HR · ผูกตำแหน่งและโควตา</h2>
+        <form method="post" action="{% url 'recruitment:requisition_hr_map' requisition.pk %}" class="stack-form">
+          {% csrf_token %}
+          {% for field in hr_form %}
+            <div class="form-field">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+            </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary">บันทึกและซิงก์โควตา</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

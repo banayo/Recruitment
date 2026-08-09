@@ -1,0 +1,81 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}ระบบสรรหาบุคลากร{% endblock %}
+{% block nav_home %}is-active{% endblock %}
+
+{% block content %}
+<section class="hero" aria-labelledby="hero-brand">
+  <div class="hero-chevrons" aria-hidden="true">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="container">
+    <div class="hero-inner">
+      <p class="hero-brand" id="hero-brand">ระบบสรรหาบุคลากร</p>
+      <h1 class="hero-title">ขออัตรากำลัง อนุมัติตามสาย แล้วดำเนินการต่อได้ชัดเจน</h1>
+      <p class="hero-copy">สร้างคำขอแล้วส่งหัวหน้าอัตโนมัติจาก approve_code — หัวหน้ายังไม่เคยเข้าสู่ระบบก็รับคิวได้</p>
+      <div class="cta-group">
+        {% if user.is_authenticated %}
+          <a class="btn btn-primary" href="{% url 'recruitment:requisition_create' %}">สร้างคำขออัตรากำลัง</a>
+          <a class="btn btn-outline" href="{% url 'recruitment:approval_inbox' %}">ดูคิวรออนุมัติ</a>
+        {% else %}
+          <a class="btn btn-primary" href="{% url 'oidc_authentication_init' %}">เข้าสู่ระบบ</a>
+          <a class="btn btn-outline" href="#workflow">ดูขั้นตอนการทำงาน</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band band-cloud" id="workflow" aria-labelledby="workflow-title">
+  <div class="container">
+    <h2 class="section-title" id="workflow-title">ขั้นตอนการอนุมัติ</h2>
+    <p class="section-copy">เฟส 1 โฟกัสคำขอและการอนุมัติตามสายรายงาน — ไม่ใช้ group Manager</p>
+    <ol class="flow-list">
+      <li>
+        <span class="step">01</span>
+        <div>
+          <h3>สร้างคำขอ</h3>
+          <p>พนักงานระบุจำนวน ความเร่งด่วน และวันที่ต้องการ</p>
+        </div>
+      </li>
+      <li>
+        <span class="step">02</span>
+        <div>
+          <h3>ส่งหัวหน้าอัตโนมัติ</h3>
+          <p>ระบบใส่ approver_unid จาก approve_code ของผู้ขอ</p>
+        </div>
+      </li>
+      <li>
+        <span class="step">03</span>
+        <div>
+          <h3>อนุมัติหรือปฏิเสธ</h3>
+          <p>หัวหน้าที่ person_unid ตรงกับ approver_unid จัดการในคิวรออนุมัติ</p>
+        </div>
+      </li>
+      <li>
+        <span class="step">04</span>
+        <div>
+          <h3>HR ผูกตำแหน่ง</h3>
+          <p>กลุ่ม HR ผูก JobPosition และซิงก์โควตา target_headcount</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="band band-ink" id="start" aria-labelledby="start-title">
+  <div class="container ink-cta">
+    <div>
+      <h2 class="section-title" id="start-title">เข้าสู่ระบบด้วย Authentik</h2>
+      <p class="section-copy">โทเคนเก็บใน session ฝั่งเซิร์ฟเวอร์ เบราว์เซอร์มีแค่คุกกี้ sessionid</p>
+    </div>
+    {% if user.is_authenticated %}
+      <a class="btn btn-primary" href="{% url 'recruitment:requisition_create' %}">สร้างคำขอ</a>
+    {% else %}
+      <a class="btn btn-primary" href="{% url 'oidc_authentication_init' %}">เข้าสู่ระบบ</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

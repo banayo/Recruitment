@@ -1,0 +1,38 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}สร้างคำขออัตรากำลัง{% endblock %}
+{% block nav_requisitions %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container narrow">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">สร้างคำขออัตรากำลัง</h1>
+        <p class="page-copy">
+          จะส่งให้หัวหน้าอัตโนมัติ:
+          <strong>{{ user.approve_code|default:"—" }}</strong>
+          (จาก approve_code)
+        </p>
+      </div>
+    </div>
+
+    <form method="post" class="stack-form">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="field-error">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="cta-group">
+        <button type="submit" class="btn btn-primary">ส่งคำขอ</button>
+        <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">ยกเลิก</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

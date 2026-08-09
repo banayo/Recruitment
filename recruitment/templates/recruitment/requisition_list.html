@@ -1,0 +1,49 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}คำขออัตรากำลัง{% endblock %}
+{% block nav_requisitions %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">คำขออัตรากำลัง</h1>
+        <p class="page-copy">รายการคำขอของคุณ{% if is_hr_user %}และทั้งระบบ (HR){% endif %}</p>
+      </div>
+      <a class="btn btn-primary" href="{% url 'recruitment:requisition_create' %}">สร้างคำขอ</a>
+    </div>
+
+    {% if requisitions %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ผู้ขอ</th>
+              <th>ผู้อนุมัติ</th>
+              <th>จำนวน</th>
+              <th>สถานะ</th>
+              <th>วันที่สร้าง</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in requisitions %}
+              <tr>
+                <td><a href="{% url 'recruitment:requisition_detail' item.pk %}">{{ item.pk }}</a></td>
+                <td>{{ item.requester.nickname|default:item.requester.person_unid }}</td>
+                <td>{{ item.approver_unid }}</td>
+                <td>{{ item.required_headcount }}{% if item.approved_headcount %} / {{ item.approved_headcount }}{% endif %}</td>
+                <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
+                <td>{{ item.created_at|date:"d/m/Y H:i" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">ยังไม่มีคำขอ — <a href="{% url 'recruitment:requisition_create' %}">สร้างคำขอแรก</a></p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

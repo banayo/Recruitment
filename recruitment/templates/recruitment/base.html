@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ระบบสรรหาบุคลากร{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'recruitment/css/design.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="เมนูหลัก">
+      <div class="sidebar-brand">
+        <a class="brand" href="{% url 'recruitment:home' %}">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-text">ระบบสรรหาบุคลากร</span>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <p class="sidebar-label">พื้นที่ทำงาน</p>
+        <ul>
+          <li>
+            <a href="{% url 'recruitment:home' %}" class="{% block nav_home %}{% endblock %}">
+              หน้าแรก
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'recruitment:requisition_list' %}" class="{% block nav_requisitions %}{% endblock %}">คำขออัตรากำลัง</a>
+          </li>
+          <li>
+            <a href="{% url 'recruitment:approval_inbox' %}" class="{% block nav_approvals %}{% endblock %}">
+              รออนุมัติ
+              {% if pending_approvals_count %}
+                <span class="nav-count">{{ pending_approvals_count }}</span>
+              {% endif %}
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        {% if user.is_authenticated %}
+          <p class="sidebar-meta">
+            {{ request.session.oidc_groups }}
+            {{ user.nickname|default:user.person_unid }}
+            {% if is_hr_user %}· HR{% endif %}
+          </p>
+          <a class="btn btn-outline btn-block" href="{% url 'oidc_logout' %}">ออกจากระบบ</a>
+        {% else %}
+          <a class="btn btn-primary btn-block" href="{% url 'oidc_authentication_init' %}">เข้าสู่ระบบ</a>
+          <p class="sidebar-meta">SSO ผ่าน Authentik</p>
+        {% endif %}
+      </div>
+    </aside>
+
+    <div class="app-frame">
+      <div class="utility-strip">
+        <div class="utility-inner">
+          <button
+            type="button"
+            class="nav-toggle"
+            id="nav-toggle"
+            aria-controls="sidebar"
+            aria-expanded="false"
+            aria-label="เปิดเมนู"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <span>ระบบสรรหาภายใน · เฟส 1 · อนุมัติอัตรากำลัง</span>
+        </div>
+      </div>
+
+      <main class="app-content">
+        {% if messages %}
+          <div class="container messages">
+            {% for message in messages %}
+              <p class="message message-{{ message.tags }}">{{ message }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+
+      <footer class="site-footer">
+        <div class="container">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true"></span>
+            ระบบสรรหาบุคลากร
+          </div>
+          <p>คำขออัตรากำลังและการอนุมัติตามสายรายงาน — เฟส 1</p>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+
+  <script>
+    (function () {
+      const toggle = document.getElementById("nav-toggle");
+      const sidebar = document.getElementById("sidebar");
+      const backdrop = document.getElementById("sidebar-backdrop");
+      if (!toggle || !sidebar || !backdrop) return;
+
+      function setOpen(open) {
+        document.body.classList.toggle("sidebar-open", open);
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        toggle.setAttribute("aria-label", open ? "ปิดเมนู" : "เปิดเมนู");
+        backdrop.hidden = !open;
+      }
+
+      toggle.addEventListener("click", function () {
+        setOpen(!document.body.classList.contains("sidebar-open"));
+      });
+      backdrop.addEventListener("click", function () {
+        setOpen(false);
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}รออนุมัติ{% endblock %}
+{% block nav_approvals %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">คิวรออนุมัติ</h1>
+        <p class="page-copy">
+          ใบที่ approver_unid ตรงกับรหัสของคุณ
+          ({{ user.person_unid }})
+        </p>
+      </div>
+    </div>
+
+    {% if requisitions %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ผู้ขอ</th>
+              <th>ฝ่าย / แผนก</th>
+              <th>จำนวนที่ขอ</th>
+              <th>ความเร่งด่วน</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in requisitions %}
+              <tr>
+                <td>{{ item.pk }}</td>
+                <td>{{ item.requester.nickname|default:item.requester.person_unid }}</td>
+                <td>{{ item.requester.division }} / {{ item.requester.department }}</td>
+                <td>{{ item.required_headcount }}</td>
+                <td>{{ item.get_priority_display }}</td>
+                <td><a class="btn btn-outline" href="{% url 'recruitment:requisition_detail' item.pk %}">เปิดดู</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">ไม่มีคำขอรออนุมัติในขณะนี้</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
