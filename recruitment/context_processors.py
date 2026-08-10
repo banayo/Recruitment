@@ -1,4 +1,4 @@
-from .authz import get_oidc_groups, is_hr
+from .auth import is_hr
 from .models import Requisition
 
 
@@ -12,7 +12,6 @@ def recruitment_context(request):
         ).count()
 
     return {
-        "oidc_groups": get_oidc_groups(request) if hasattr(request, "session") else [],
-        "is_hr_user": is_hr(request) if hasattr(request, "session") else False,
+        "is_hr_user": is_hr(request),
         "pending_approvals_count": pending_approvals,
     }

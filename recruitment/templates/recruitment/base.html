@@ -10,6 +10,7 @@
 </head>
 <body>
   <div class="app-shell">
+    {# Vertical navbar — cloud surface, brand + grouped links + footer CTA #}
     <aside class="sidebar" id="sidebar" aria-label="เมนูหลัก">
       <div class="sidebar-brand">
         <a class="brand" href="{% url 'recruitment:home' %}">
@@ -19,43 +20,63 @@
       </div>
 
       <nav class="sidebar-nav">
-        <p class="sidebar-label">พื้นที่ทำงาน</p>
-        <ul>
-          <li>
-            <a href="{% url 'recruitment:home' %}" class="{% block nav_home %}{% endblock %}">
-              หน้าแรก
-            </a>
-          </li>
-          <li>
-            <a href="{% url 'recruitment:requisition_list' %}" class="{% block nav_requisitions %}{% endblock %}">คำขออัตรากำลัง</a>
-          </li>
-          <li>
-            <a href="{% url 'recruitment:approval_inbox' %}" class="{% block nav_approvals %}{% endblock %}">
-              รออนุมัติ
-              {% if pending_approvals_count %}
-                <span class="nav-count">{{ pending_approvals_count }}</span>
-              {% endif %}
-            </a>
-          </li>
-        </ul>
+        <div class="sidebar-group">
+          <p class="sidebar-label">พื้นที่ทำงาน</p>
+          <ul>
+            <li>
+              <a href="{% url 'recruitment:home' %}" class="{% block nav_home %}{% endblock %}">หน้าแรก</a>
+            </li>
+            <li>
+              <a href="{% url 'recruitment:requisition_list' %}" class="{% block nav_requisitions %}{% endblock %}">คำขออัตรากำลัง</a>
+            </li>
+            <li>
+              <a href="{% url 'recruitment:approval_inbox' %}" class="{% block nav_approvals %}{% endblock %}">
+                รออนุมัติ
+                {% if pending_approvals_count %}
+                  <span class="nav-count">{{ pending_approvals_count }}</span>
+                {% endif %}
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-group">
+          <p class="sidebar-label">ข้อมูลหลัก</p>
+          <ul>
+            <li>
+              <a href="{% url 'recruitment:division_list' %}" class="{% block nav_divisions %}{% endblock %}">ฝ่าย</a>
+            </li>
+            <li>
+              <a href="{% url 'recruitment:department_list' %}" class="{% block nav_departments %}{% endblock %}">แผนก</a>
+            </li>
+            <li>
+              <a href="{% url 'recruitment:position_list' %}" class="{% block nav_positions %}{% endblock %}">ตำแหน่งงาน</a>
+            </li>
+          </ul>
+        </div>
       </nav>
 
       <div class="sidebar-footer">
         {% if user.is_authenticated %}
-          <p class="sidebar-meta">
-            {{ request.session.oidc_groups }}
-            {{ user.nickname|default:user.person_unid }}
-            {% if is_hr_user %}· HR{% endif %}
-          </p>
+          <div class="sidebar-user">
+            <p class="sidebar-user-name">
+              {{ user.first_name|default:user.nickname|default:user.person_unid }}
+              {% if is_hr_user %}<span class="sidebar-role">HR</span>{% endif %}
+            </p>
+            {% if user.division %}
+              <p class="sidebar-meta">ฝ่าย {{ user.division }}</p>
+            {% endif %}
+            {% if user.department %}
+              <p class="sidebar-meta">แผนก {{ user.department }}</p>
+            {% endif %}
+          </div>
           <a class="btn btn-outline btn-block" href="{% url 'oidc_logout' %}">ออกจากระบบ</a>
-        {% else %}
-          <a class="btn btn-primary btn-block" href="{% url 'oidc_authentication_init' %}">เข้าสู่ระบบ</a>
-          <p class="sidebar-meta">SSO ผ่าน Authentik</p>
         {% endif %}
       </div>
     </aside>
 
     <div class="app-frame">
+      {# Utility strip — fog band #}
       <div class="utility-strip">
         <div class="utility-inner">
           <button
@@ -70,7 +91,7 @@
             <span></span>
             <span></span>
           </button>
-          <span>ระบบสรรหาภายใน · เฟส 1 · อนุมัติอัตรากำลัง</span>
+          <span class="utility-label">ระบบสรรหาภายใน · เฟส 1 · อนุมัติอัตรากำลัง</span>
         </div>
       </div>
 
@@ -85,15 +106,7 @@
         {% block content %}{% endblock %}
       </main>
 
-      <footer class="site-footer">
-        <div class="container">
-          <div class="brand">
-            <span class="brand-mark" aria-hidden="true"></span>
-            ระบบสรรหาบุคลากร
-          </div>
-          <p>คำขออัตรากำลังและการอนุมัติตามสายรายงาน — เฟส 1</p>
-        </div>
-      </footer>
+
     </div>
   </div>
 

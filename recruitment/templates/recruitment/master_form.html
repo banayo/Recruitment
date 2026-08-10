@@ -1,0 +1,36 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block nav_divisions %}{% if active_nav == "divisions" %}is-active{% endif %}{% endblock %}
+{% block nav_departments %}{% if active_nav == "departments" %}is-active{% endif %}{% endblock %}
+{% block nav_positions %}{% if active_nav == "positions" %}is-active{% endif %}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container narrow">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{ page_title }}</h1>
+        {% if page_copy %}<p class="page-copy">{{ page_copy }}</p>{% endif %}
+      </div>
+    </div>
+
+    <form method="post" class="stack-form">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="field-error">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="cta-group">
+        <button type="submit" class="btn btn-primary">บันทึก</button>
+        <a class="btn btn-outline" href="{% url cancel_url %}">ยกเลิก</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

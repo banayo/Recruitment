@@ -1,7 +1,24 @@
+"""
+Authentik OIDC login + authorization helpers.
+
+Authentik ส่ง claim:
+  role = "HR"   → สิทธิ์ HR
+  (ค่าอื่น / ว่าง) → ไม่ใช่ HR
+
+เก็บ role บน User ใน DB ตาม claim ตรง ๆ — ไม่ใส่ default
+"""
+
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
+HR_ROLE = "HR"
 
-def _claim_str(claims, *keys, default=""):
+
+# ---------------------------------------------------------------------------
+# Claim helpers
+# ---------------------------------------------------------------------------
+
+def claim_str(claims, *keys, default=""):
+    """อ่านค่า claim เป็น string (ลองหลาย key ตามลำดับ)."""
     for key in keys:
         value = claims.get(key)
         if value is None:
@@ -10,87 +27,102 @@ def _claim_str(claims, *keys, default=""):
     return default
 
 
-def _claim_groups(claims):
-    groups = claims.get("groups") or claims.get("roles") or []
-    if isinstance(groups, str):
-        return [groups]
-    if not isinstance(groups, (list, tuple)):
-        return []
-    normalized = []
-    for item in groups:
-        if isinstance(item, dict):
-            name = item.get("name") or item.get("id") or ""
-            if name:
-                normalized.append(str(name))
-        elif item is not None:
-            normalized.append(str(item))
-    return normalized
+def claim_role(claims):
+    """อ่าน role จาก claim ตามที่ Authentik ส่งมา — ไม่ใส่ default."""
+    role = claim_str(claims, "role")# ข้อมูลมี Key ที่ชื่อ "role" ไหม ถ้ามีให้ดึงค่ามา
+    return role.upper() if role else ""
 
+
+# ---------------------------------------------------------------------------
+# Authorization (ใช้ใน views)
+# ---------------------------------------------------------------------------
+
+def is_hr(request):
+    """user.role == HR หรือไม่."""
+    user = getattr(request, "user", None)
+    if user is None or not user.is_authenticated:
+        return False
+    return (user.role or "").upper() == HR_ROLE
+
+
+def require_hr(request):
+    """True ถ้าเป็น HR หรือ superuser."""
+    user = getattr(request, "user", None)
+    if user is None or not user.is_authenticated:
+        return False
+    return is_hr(request) or user.is_superuser
+
+
+def can_approve(user, requisition):
+    """ผู้อนุมัติคือคนที่ person_unid ตรงกับ approver_unid ของใบคำขอ."""
+    if not user.is_authenticated:
+        return False
+    if not user.person_unid:
+        return False
+    return user.person_unid == requisition.approver_unid
+
+
+def can_view_requisition(request, requisition):
+    """ดูใบคำขอได้ถ้าเป็น HR / superuser / ผู้สร้าง / ผู้อนุมัติ."""
+    user = request.user
+    if not user.is_authenticated:
+        return False
+    if is_hr(request) or user.is_superuser:
+        return True
+    if requisition.requester_id == user.id:
+        return True
+    return can_approve(user, requisition)
+
+
+# ---------------------------------------------------------------------------
+# OIDC backend (JIT User)
+# ---------------------------------------------------------------------------
 
 class AuthentikOIDCBackend(OIDCAuthenticationBackend):
-    """
-    JIT provision User from Authentik claims.
-    Roles stay in session only (oidc_groups) — never on the User model.
-    OIDC tokens remain in the Django server-side session.
-    """
+    """Login ด้วย Authentik แล้วสร้าง/อัปเดต User จาก claims รวม role."""
 
     def filter_users_by_claims(self, claims):
-        sub = _claim_str(claims, "sub")
+        sub = claim_str(claims, "sub")
         if not sub:
             return self.UserModel.objects.none()
         return self.UserModel.objects.filter(authentik_sub=sub)
 
     def create_user(self, claims):
-        person_unid = _claim_str(claims, "person_unid")
-        sub = _claim_str(claims, "sub")
+        person_unid = claim_str(claims, "person_unid")
+        sub = claim_str(claims, "sub")
         if not person_unid or not sub:
             return None
 
-        username = person_unid
         user = self.UserModel.objects.create_user(
-            username=username,
-            email=_claim_str(claims, "email"),
+            username=person_unid,
+            email=claim_str(claims, "email"),
             authentik_sub=sub,
             person_unid=person_unid,
         )
         user.set_unusable_password()
-        self._apply_claims(user, claims)
+        self.apply_claims(user, claims)
         user.save()
-        self._store_groups_in_session(claims)
         return user
 
     def update_user(self, user, claims):
-        self._apply_claims(user, claims)
+        self.apply_claims(user, claims)
         user.save()
-        self._store_groups_in_session(claims)
         return user
 
-    def _apply_claims(self, user, claims):
-        user.authentik_sub = _claim_str(claims, "sub") or user.authentik_sub
-        user.person_unid = _claim_str(claims, "person_unid") or user.person_unid
-        user.approve_code = _claim_str(claims, "approve_code")
-        user.gender = _claim_str(claims, "gender")
-        user.division = _claim_str(claims, "division")
-        user.department = _claim_str(claims, "department")
-        user.location = _claim_str(claims, "location")
-        user.nickname = _claim_str(claims, "nickname")
-        user.company_code = _claim_str(claims, "company_code")
+    def apply_claims(self, user, claims):
+        user.authentik_sub = claim_str(claims, "sub") or user.authentik_sub
+        user.person_unid = claim_str(claims, "person_unid") or user.person_unid
+        user.approve_code = claim_str(claims, "approve_code")
+        user.gender = claim_str(claims, "gender")
+        user.division = claim_str(claims, "division")
+        user.department = claim_str(claims, "department")
+        user.location = claim_str(claims, "location")
+        user.nickname = claim_str(claims, "nickname")
+        user.company_code = claim_str(claims, "company_code")
+        user.role = claim_role(claims)
+        user.first_name = claim_str(claims, "given_name")
 
-        # OIDC given_name / family_name → AbstractUser first_name / last_name
-        given_name = _claim_str(claims, "given_name")
-        if given_name:
-            user.first_name = given_name
 
-        family_name = _claim_str(claims, "family_name")
-        if family_name:
-            user.last_name = family_name
-
-        email = _claim_str(claims, "email")
+        email = claim_str(claims, "email")
         if email:
             user.email = email
-
-    def _store_groups_in_session(self, claims):
-        request = getattr(self, "request", None)
-        if request is None:
-            return
-        request.session["oidc_groups"] = _claim_groups(claims)

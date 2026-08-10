@@ -1,6 +1,68 @@
 from django import forms
 
-from .models import JobPosition, Requisition
+from .models import Department, Division, JobPosition, Requisition
+
+
+class DivisionForm(forms.ModelForm):
+    class Meta:
+        model = Division
+        fields = ("name",)
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "text-input"}),
+        }
+        labels = {
+            "name": "ชื่อฝ่าย",
+        }
+
+
+class DepartmentForm(forms.ModelForm):
+    class Meta:
+        model = Department
+        fields = ("division", "name")
+        widgets = {
+            "division": forms.Select(attrs={"class": "text-input"}),
+            "name": forms.TextInput(attrs={"class": "text-input"}),
+        }
+        labels = {
+            "division": "ฝ่าย",
+            "name": "ชื่อแผนก",
+        }
+
+
+class JobPositionForm(forms.ModelForm):
+    class Meta:
+        model = JobPosition
+        fields = (
+            "department",
+            "title",
+            "description",
+            "current_headcount",
+            "target_headcount",
+        )
+        widgets = {
+            "department": forms.Select(attrs={"class": "text-input"}),
+            "title": forms.TextInput(attrs={"class": "text-input"}),
+            "description": forms.Textarea(attrs={"class": "text-input", "rows": 4}),
+            "current_headcount": forms.NumberInput(
+                attrs={"min": 0, "class": "text-input"}
+            ),
+            "target_headcount": forms.NumberInput(
+                attrs={"min": 0, "class": "text-input"}
+            ),
+        }
+        labels = {
+            "department": "แผนก",
+            "title": "ชื่อตำแหน่ง",
+            "description": "รายละเอียด",
+            "current_headcount": "จำนวนคนปัจจุบัน",
+            "target_headcount": "โควตาเปิดรับ",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["department"].queryset = Department.objects.select_related(
+            "division"
+        )
 
 
 class RequisitionCreateForm(forms.ModelForm):
@@ -8,9 +70,13 @@ class RequisitionCreateForm(forms.ModelForm):
         model = Requisition
         fields = ("required_headcount", "priority", "required_date", "position")
         widgets = {
-            "required_headcount": forms.NumberInput(attrs={"min": 1, "class": "text-input"}),
+            "required_headcount": forms.NumberInput(
+                attrs={"min": 1, "class": "text-input"}
+            ),
             "priority": forms.Select(attrs={"class": "text-input"}),
-            "required_date": forms.DateInput(attrs={"type": "date", "class": "text-input"}),
+            "required_date": forms.DateInput(
+                attrs={"type": "date", "class": "text-input"}
+            ),
             "position": forms.Select(attrs={"class": "text-input"}),
         }
         labels = {

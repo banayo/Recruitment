@@ -25,4 +25,14 @@ urlpatterns = [
         name="requisition_hr_map",
     ),
     path("approvals/", views.approval_inbox, name="approval_inbox"),
+    # Master data
+    path("divisions/", views.division_list, name="division_list"),
+    path("divisions/new/", views.division_create, name="division_create"),
+    path("divisions/<int:pk>/edit/", views.division_edit, name="division_edit"),
+    path("departments/", views.department_list, name="department_list"),
+    path("departments/new/", views.department_create, name="department_create"),
+    path("departments/<int:pk>/edit/", views.department_edit, name="department_edit"),
+    path("positions/", views.position_list, name="position_list"),
+    path("positions/new/", views.position_create, name="position_create"),
+    path("positions/<int:pk>/edit/", views.position_edit, name="position_edit"),
 ]

@@ -5,7 +5,8 @@ from django.db import models
 
 class User(AbstractUser):
     """
-    Profile-only custom user. Roles come from Authentik `groups` in session — never stored here.
+    Profile from Authentik claims.
+    role is stored on the user (HR / USER) — not from groups, not in session.
     division/department are claim snapshots (varchar), not FKs to org master tables.
     """
 
@@ -22,6 +23,12 @@ class User(AbstractUser):
     location = models.CharField(max_length=100, blank=True)
     nickname = models.CharField(max_length=100, blank=True)
     company_code = models.CharField(max_length=50, blank=True)
+    role = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="From Authentik claim `role` (e.g. HR)",
+    )
 
     class Meta:
         verbose_name = "user"
@@ -32,35 +39,32 @@ class User(AbstractUser):
 
 
 class Division(models.Model):
-    division_code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=200)
 
     class Meta:
-        ordering = ["division_code"]
+        ordering = ["name"]
 
     def __str__(self):
-        return f"{self.division_code} — {self.name}"
+        return self.name
 
 
 class Department(models.Model):
     division = models.ForeignKey(
         Division, on_delete=models.PROTECT, related_name="departments"
     )
-    department_code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=200)
 
     class Meta:
-        ordering = ["department_code"]
+        ordering = ["name"]
 
     def __str__(self):
-        return f"{self.department_code} — {self.name}"
+        return self.name
 
 
 class JobPosition(models.Model):
     department = models.ForeignKey(
         Department, on_delete=models.PROTECT, related_name="positions"
     )
-    job_code = models.CharField(max_length=50, unique=True)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     current_headcount = models.PositiveIntegerField(
@@ -71,10 +75,10 @@ class JobPosition(models.Model):
     )
 
     class Meta:
-        ordering = ["job_code"]
+        ordering = ["title"]
 
     def __str__(self):
-        return f"{self.job_code} — {self.title}"
+        return self.title
 
 
 class Requisition(models.Model):

@@ -4,12 +4,20 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .authz import can_approve, can_view_requisition, is_hr
-from .forms import HRMapForm, RequisitionCreateForm, RequisitionDecideForm
-from .models import Requisition
+from .auth import can_approve, can_view_requisition, is_hr, require_hr
+from .forms import (
+    DepartmentForm,
+    DivisionForm,
+    HRMapForm,
+    JobPositionForm,
+    RequisitionCreateForm,
+    RequisitionDecideForm,
+)
+from .models import Department, Division, JobPosition, Requisition
 from .services import approve_requisition, map_position_and_sync, reject_requisition
 
 
+@login_required
 def home(request):
     return render(request, "recruitment/home.html")
 
@@ -157,3 +165,180 @@ def requisition_hr_map(request, pk):
     )
     messages.success(request, "ผูกตำแหน่งและซิงก์โควตาแล้ว")
     return redirect("recruitment:requisition_detail", pk=pk)
+
+
+# ---------------------------------------------------------------------------
+# Master data: Division / Department / JobPosition (HR manage)
+# ---------------------------------------------------------------------------
+
+@login_required
+def division_list(request):
+    return render(
+        request,
+        "recruitment/division_list.html",
+        {
+            "divisions": Division.objects.all(),
+            "can_manage": require_hr(request),
+        },
+    )
+
+
+@login_required
+def division_create(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    form = DivisionForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "เพิ่มฝ่ายแล้ว")
+        return redirect("recruitment:division_list")
+    return render(
+        request,
+        "recruitment/master_form.html",
+        {
+            "form": form,
+            "page_title": "เพิ่มฝ่าย",
+            "page_copy": "สร้างฝ่ายใหม่ใน master data",
+            "cancel_url": "recruitment:division_list",
+            "active_nav": "divisions",
+        },
+    )
+
+
+@login_required
+def division_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    division = get_object_or_404(Division, pk=pk)
+    form = DivisionForm(request.POST or None, instance=division)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "บันทึกฝ่ายแล้ว")
+        return redirect("recruitment:division_list")
+    return render(
+        request,
+        "recruitment/master_form.html",
+        {
+            "form": form,
+            "page_title": f"แก้ไขฝ่าย {division.name}",
+            "page_copy": "อัปเดตชื่อฝ่าย",
+            "cancel_url": "recruitment:division_list",
+            "active_nav": "divisions",
+        },
+    )
+
+
+@login_required
+def department_list(request):
+    return render(
+        request,
+        "recruitment/department_list.html",
+        {
+            "departments": Department.objects.select_related("division"),
+            "can_manage": require_hr(request),
+        },
+    )
+
+
+@login_required
+def department_create(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    form = DepartmentForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "เพิ่มแผนกแล้ว")
+        return redirect("recruitment:department_list")
+    return render(
+        request,
+        "recruitment/master_form.html",
+        {
+            "form": form,
+            "page_title": "เพิ่มแผนก",
+            "page_copy": "เลือกฝ่าย (ระดับใหญ่กว่า) แล้วระบุชื่อแผนก",
+            "cancel_url": "recruitment:department_list",
+            "active_nav": "departments",
+        },
+    )
+
+
+@login_required
+def department_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    department = get_object_or_404(Department, pk=pk)
+    form = DepartmentForm(request.POST or None, instance=department)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "บันทึกแผนกแล้ว")
+        return redirect("recruitment:department_list")
+    return render(
+        request,
+        "recruitment/master_form.html",
+        {
+            "form": form,
+            "page_title": f"แก้ไขแผนก {department.name}",
+            "page_copy": f"ฝ่าย: {department.division}",
+            "cancel_url": "recruitment:department_list",
+            "active_nav": "departments",
+        },
+    )
+
+
+@login_required
+def position_list(request):
+    return render(
+        request,
+        "recruitment/position_list.html",
+        {
+            "positions": JobPosition.objects.select_related(
+                "department", "department__division"
+            ),
+            "can_manage": require_hr(request),
+        },
+    )
+
+
+@login_required
+def position_create(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    form = JobPositionForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "เพิ่มตำแหน่งงานแล้ว")
+        return redirect("recruitment:position_list")
+    return render(
+        request,
+        "recruitment/master_form.html",
+        {
+            "form": form,
+            "page_title": "เพิ่มตำแหน่งงาน",
+            "page_copy": "ผูกตำแหน่งกับแผนก และตั้งโควตาเริ่มต้น",
+            "cancel_url": "recruitment:position_list",
+            "active_nav": "positions",
+        },
+    )
+
+
+@login_required
+def position_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    position = get_object_or_404(JobPosition, pk=pk)
+    form = JobPositionForm(request.POST or None, instance=position)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "บันทึกตำแหน่งงานแล้ว")
+        return redirect("recruitment:position_list")
+    return render(
+        request,
+        "recruitment/master_form.html",
+        {
+            "form": form,
+            "page_title": f"แก้ไขตำแหน่ง {position.title}",
+            "page_copy": f"{position.department.division} · {position.department}",
+            "cancel_url": "recruitment:position_list",
+            "active_nav": "positions",
+        },
+    )

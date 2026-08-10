@@ -1,0 +1,55 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}ตำแหน่งงาน{% endblock %}
+{% block nav_positions %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">ตำแหน่งงาน</h1>
+        <p class="page-copy">Master JobPosition — โควตาและจำนวนคนปัจจุบัน</p>
+      </div>
+      {% if can_manage %}
+        <a class="btn btn-primary" href="{% url 'recruitment:position_create' %}">เพิ่มตำแหน่ง</a>
+      {% endif %}
+    </div>
+
+    {% if positions %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ชื่อตำแหน่ง</th>
+              <th>ฝ่าย</th>
+              <th>แผนก</th>
+              <th>คนปัจจุบัน</th>
+              <th>โควตาเปิดรับ</th>
+              {% if can_manage %}<th></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in positions %}
+              <tr>
+                <td>{{ item.title }}</td>
+                <td>{{ item.department.division.name }}</td>
+                <td>{{ item.department.name }}</td>
+                <td>{{ item.current_headcount }}</td>
+                <td>{{ item.target_headcount }}</td>
+                {% if can_manage %}
+                  <td>
+                    <a class="btn btn-outline" href="{% url 'recruitment:position_edit' item.pk %}">แก้ไข</a>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">ยังไม่มีตำแหน่ง{% if can_manage %} — <a href="{% url 'recruitment:position_create' %}">เพิ่มตำแหน่งแรก</a>{% endif %}</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

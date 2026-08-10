@@ -10,11 +10,13 @@ class UserAdmin(DjangoUserAdmin):
         "username",
         "person_unid",
         "nickname",
+        "role",
         "company_code",
         "division",
         "department",
         "is_staff",
     )
+    list_filter = ("role", "is_staff")
     search_fields = ("username", "person_unid", "nickname", "authentik_sub", "email")
     ordering = ("person_unid",)
 
@@ -26,6 +28,7 @@ class UserAdmin(DjangoUserAdmin):
                     "authentik_sub",
                     "person_unid",
                     "approve_code",
+                    "role",
                     "gender",
                     "division",
                     "department",
@@ -44,6 +47,7 @@ class UserAdmin(DjangoUserAdmin):
                     "authentik_sub",
                     "person_unid",
                     "approve_code",
+                    "role",
                     "nickname",
                     "company_code",
                 )
@@ -54,28 +58,27 @@ class UserAdmin(DjangoUserAdmin):
 
 @admin.register(Division)
 class DivisionAdmin(admin.ModelAdmin):
-    list_display = ("division_code", "name")
-    search_fields = ("division_code", "name")
+    list_display = ("name",)
+    search_fields = ("name",)
 
 
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ("department_code", "name", "division")
+    list_display = ("name", "division")
     list_filter = ("division",)
-    search_fields = ("department_code", "name")
+    search_fields = ("name",)
 
 
 @admin.register(JobPosition)
 class JobPositionAdmin(admin.ModelAdmin):
     list_display = (
-        "job_code",
         "title",
         "department",
         "current_headcount",
         "target_headcount",
     )
     list_filter = ("department",)
-    search_fields = ("job_code", "title")
+    search_fields = ("title",)
 
 
 @admin.register(Requisition)
