@@ -10,8 +10,11 @@
       <div>
         <h1 class="page-title">คิวรออนุมัติ</h1>
         <p class="page-copy">
-          ใบที่ approver_unid ตรงกับรหัสของคุณ
-          ({{ user.person_unid }})
+          {% if is_hr_user %}
+            HR เห็นคำขอรออนุมัติทั้งหมด และอนุมัติแทนหัวหน้าได้
+          {% else %}
+            ใบที่ approver_unid ตรงกับรหัสของคุณ ({{ user.person_unid }})
+          {% endif %}
         </p>
       </div>
     </div>
@@ -23,6 +26,7 @@
             <tr>
               <th>#</th>
               <th>ผู้ขอ</th>
+              <th>ชื่อตำแหน่ง</th>
               <th>ฝ่าย / แผนก</th>
               <th>จำนวนที่ขอ</th>
               <th>ความเร่งด่วน</th>
@@ -34,6 +38,7 @@
               <tr>
                 <td>{{ item.pk }}</td>
                 <td>{{ item.requester.nickname|default:item.requester.person_unid }}</td>
+                <td>{{ item.position_title|default:"—" }}</td>
                 <td>{{ item.requester.division }} / {{ item.requester.department }}</td>
                 <td>{{ item.required_headcount }}</td>
                 <td>{{ item.get_priority_display }}</td>

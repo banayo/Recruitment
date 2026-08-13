@@ -771,6 +771,10 @@ a:hover {
   padding: 16px 18px;
 }
 
+.detail-grid .full {
+  grid-column: 1 / -1;
+}
+
 .detail-grid dt {
   margin: 0 0 6px;
   color: var(--color-graphite);

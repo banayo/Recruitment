@@ -54,12 +54,21 @@ def require_hr(request):
 
 
 def can_approve(user, requisition):
-    """ผู้อนุมัติคือคนที่ person_unid ตรงกับ approver_unid ของใบคำขอ."""
+    """หัวหน้า (person_unid == approver_unid) หรือ HR / superuser อนุมัติแทนได้."""
     if not user.is_authenticated:
         return False
+    if user.is_superuser or (user.role or "").upper() == HR_ROLE:
+        return True
     if not user.person_unid:
         return False
     return user.person_unid == requisition.approver_unid
+
+
+def can_edit_requisition(user, requisition):
+    """หัวหน้า / HR แก้ไขใบที่ยังรออนุมัติได้."""
+    if requisition.status != requisition.Status.PENDING:
+        return False
+    return can_approve(user, requisition)
 
 
 def can_view_requisition(request, requisition):

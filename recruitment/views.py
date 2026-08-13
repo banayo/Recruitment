@@ -2,9 +2,16 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from .auth import can_approve, can_view_requisition, is_hr, require_hr
+from .auth import (
+    can_approve,
+    can_edit_requisition,
+    can_view_requisition,
+    is_hr,
+    require_hr,
+)
 from .forms import (
     DepartmentForm,
     DivisionForm,
@@ -12,6 +19,7 @@ from .forms import (
     JobPositionForm,
     RequisitionCreateForm,
     RequisitionDecideForm,
+    RequisitionEditForm,
 )
 from .models import Department, Division, JobPosition, Requisition
 from .services import approve_requisition, map_position_and_sync, reject_requisition
@@ -58,7 +66,51 @@ def requisition_create(request):
     else:
         form = RequisitionCreateForm()
 
-    return render(request, "recruitment/requisition_form.html", {"form": form})
+    return render(
+        request,
+        "recruitment/requisition_form.html",
+        {
+            "form": form,
+            "page_title": "สร้างคำขออัตรากำลัง",
+            "page_copy": (
+                f'จะส่งให้หัวหน้าอัตโนมัติ: <strong>{request.user.approve_code or "—"}</strong>'
+                " (จาก approve_code)"
+            ),
+            "submit_label": "ส่งคำขอ",
+            "cancel_url": reverse("recruitment:requisition_list"),
+        },
+    )
+
+
+@login_required
+def requisition_edit(request, pk):
+    requisition = get_object_or_404(Requisition, pk=pk)
+    if not can_edit_requisition(request.user, requisition):
+        return HttpResponseForbidden("ไม่มีสิทธิ์แก้ไขคำขอนี้")
+
+    if request.method == "POST":
+        form = RequisitionEditForm(request.POST, instance=requisition)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "บันทึกการแก้ไขแล้ว")
+            return redirect("recruitment:requisition_detail", pk=requisition.pk)
+    else:
+        form = RequisitionEditForm(instance=requisition)
+
+    return render(
+        request,
+        "recruitment/requisition_form.html",
+        {
+            "form": form,
+            "page_title": f"แก้ไขคำขอ #{requisition.pk}",
+            "page_copy": "หัวหน้าสามารถปรับรายละเอียดและเขียนหมายเหตุได้ก่อนอนุมัติ",
+            "submit_label": "บันทึก",
+            "cancel_url": reverse(
+                "recruitment:requisition_detail", kwargs={"pk": requisition.pk}
+            ),
+            "active_nav": "approvals",
+        },
+    )
 
 
 @login_required
@@ -88,6 +140,7 @@ def requisition_detail(request, pk):
             "decide_form": decide_form,
             "hr_form": hr_form,
             "can_decide": decide_form is not None,
+            "can_edit": can_edit_requisition(request.user, requisition),
             "is_hr_user": is_hr(request) or request.user.is_superuser,
         },
     )
@@ -95,15 +148,16 @@ def requisition_detail(request, pk):
 
 @login_required
 def approval_inbox(request):
-    qs = (
-        Requisition.objects.filter(
-            approver_unid=request.user.person_unid,
-            status=Requisition.Status.PENDING,
-        )
-        .select_related("requester", "position")
-        .order_by("-created_at")
+    qs = Requisition.objects.filter(status=Requisition.Status.PENDING).select_related(
+        "requester", "position"
     )
-    return render(request, "recruitment/approval_inbox.html", {"requisitions": qs})
+    if not (is_hr(request) or request.user.is_superuser):
+        qs = qs.filter(approver_unid=request.user.person_unid)
+    return render(
+        request,
+        "recruitment/approval_inbox.html",
+        {"requisitions": qs.order_by("-created_at")},
+    )
 
 
 @login_required
@@ -113,9 +167,7 @@ def requisition_approve(request, pk):
     if requisition.status != Requisition.Status.PENDING:
         messages.error(request, "คำขอนี้ไม่อยู่ในสถานะรออนุมัติ")
         return redirect("recruitment:requisition_detail", pk=pk)
-    if not can_approve(request.user, requisition) and not (
-        is_hr(request) or request.user.is_superuser
-    ):
+    if not can_approve(request.user, requisition):
         return HttpResponseForbidden("ไม่มีสิทธิ์อนุมัติคำขอนี้")
 
     form = RequisitionDecideForm(request.POST, requisition=requisition)
@@ -136,9 +188,7 @@ def requisition_reject(request, pk):
     if requisition.status != Requisition.Status.PENDING:
         messages.error(request, "คำขอนี้ไม่อยู่ในสถานะรออนุมัติ")
         return redirect("recruitment:requisition_detail", pk=pk)
-    if not can_approve(request.user, requisition) and not (
-        is_hr(request) or request.user.is_superuser
-    ):
+    if not can_approve(request.user, requisition):
         return HttpResponseForbidden("ไม่มีสิทธิ์ปฏิเสธคำขอนี้")
 
     reject_requisition(requisition)

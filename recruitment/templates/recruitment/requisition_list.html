@@ -21,6 +21,7 @@
             <tr>
               <th>#</th>
               <th>ผู้ขอ</th>
+              <th>ชื่อตำแหน่ง</th>
               <th>ผู้อนุมัติ</th>
               <th>จำนวน</th>
               <th>สถานะ</th>
@@ -32,6 +33,7 @@
               <tr>
                 <td><a href="{% url 'recruitment:requisition_detail' item.pk %}">{{ item.pk }}</a></td>
                 <td>{{ item.requester.nickname|default:item.requester.person_unid }}</td>
+                <td>{{ item.position_title|default:"—" }}</td>
                 <td>{{ item.approver_unid }}</td>
                 <td>{{ item.required_headcount }}{% if item.approved_headcount %} / {{ item.approved_headcount }}{% endif %}</td>
                 <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>

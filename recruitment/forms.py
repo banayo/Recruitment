@@ -68,21 +68,29 @@ class JobPositionForm(forms.ModelForm):
 class RequisitionCreateForm(forms.ModelForm):
     class Meta:
         model = Requisition
-        fields = ("required_headcount", "priority", "required_date", "position")
+        fields = (
+            "position_title",
+            "required_headcount",
+            "priority",
+            "job_description",
+            "position",
+        )
         widgets = {
+            "position_title": forms.TextInput(attrs={"class": "text-input"}),
             "required_headcount": forms.NumberInput(
                 attrs={"min": 1, "class": "text-input"}
             ),
             "priority": forms.Select(attrs={"class": "text-input"}),
-            "required_date": forms.DateInput(
-                attrs={"type": "date", "class": "text-input"}
+            "job_description": forms.Textarea(
+                attrs={"class": "text-input", "rows": 5}
             ),
             "position": forms.Select(attrs={"class": "text-input"}),
         }
         labels = {
+            "position_title": "ชื่อตำแหน่ง",
             "required_headcount": "จำนวนที่ขอ",
             "priority": "ความเร่งด่วน",
-            "required_date": "วันที่ต้องการ",
+            "job_description": "ละเอียดงาน",
             "position": "ตำแหน่งงาน (ถ้าทราบ)",
         }
 
@@ -92,12 +100,67 @@ class RequisitionCreateForm(forms.ModelForm):
             "department", "department__division"
         )
         self.fields["position"].required = False
-        self.fields["required_date"].required = False
+        self.fields["job_description"].required = False
+        self.fields["position_title"].required = True
 
     def clean_required_headcount(self):
         value = self.cleaned_data["required_headcount"]
         if value < 1:
             raise forms.ValidationError("ต้องขออย่างน้อย 1 อัตรา")
+        return value
+
+    def clean_position_title(self):
+        value = (self.cleaned_data.get("position_title") or "").strip()
+        if not value:
+            raise forms.ValidationError("กรุณาระบุชื่อตำแหน่ง")
+        return value
+
+
+class RequisitionEditForm(forms.ModelForm):
+    class Meta:
+        model = Requisition
+        fields = (
+            "position_title",
+            "required_headcount",
+            "priority",
+            "job_description",
+            "approver_note",
+        )
+        widgets = {
+            "position_title": forms.TextInput(attrs={"class": "text-input"}),
+            "required_headcount": forms.NumberInput(
+                attrs={"min": 1, "class": "text-input"}
+            ),
+            "priority": forms.Select(attrs={"class": "text-input"}),
+            "job_description": forms.Textarea(
+                attrs={"class": "text-input", "rows": 5}
+            ),
+            "approver_note": forms.Textarea(attrs={"class": "text-input", "rows": 4}),
+        }
+        labels = {
+            "position_title": "ชื่อตำแหน่ง",
+            "required_headcount": "จำนวนที่ขอ",
+            "priority": "ความเร่งด่วน",
+            "job_description": "ละเอียดงาน",
+            "approver_note": "หมายเหตุ (หัวหน้า)",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["job_description"].required = False
+        self.fields["approver_note"].required = False
+        self.fields["position_title"].required = True
+
+    def clean_required_headcount(self):
+        value = self.cleaned_data["required_headcount"]
+        if value < 1:
+            raise forms.ValidationError("ต้องขออย่างน้อย 1 อัตรา")
+        return value
+
+    def clean_position_title(self):
+        value = (self.cleaned_data.get("position_title") or "").strip()
+        if not value:
+            raise forms.ValidationError("กรุณาระบุชื่อตำแหน่ง")
         return value
 
 

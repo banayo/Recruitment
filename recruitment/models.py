@@ -108,6 +108,11 @@ class Requisition(models.Model):
         related_name="requisitions",
         help_text="Nullable until HR maps an official job position",
     )
+    position_title = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Requested job title from the requester",
+    )
     required_headcount = models.PositiveIntegerField(
         help_text="Headcount requested by the manager/requester"
     )
@@ -120,7 +125,12 @@ class Requisition(models.Model):
     priority = models.CharField(
         max_length=20, choices=Priority.choices, default=Priority.NORMAL
     )
-    required_date = models.DateField(null=True, blank=True)
+    job_description = models.TextField(
+        blank=True, help_text="Job details provided by the requester"
+    )
+    approver_note = models.TextField(
+        blank=True, help_text="Notes written by the approving manager"
+    )
     is_headcount_synced = models.BooleanField(
         default=False,
         help_text="True after approved quota has been applied to JobPosition.target_headcount",

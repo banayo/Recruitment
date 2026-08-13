@@ -10,6 +10,11 @@ urlpatterns = [
     path("requisitions/new/", views.requisition_create, name="requisition_create"),
     path("requisitions/<int:pk>/", views.requisition_detail, name="requisition_detail"),
     path(
+        "requisitions/<int:pk>/edit/",
+        views.requisition_edit,
+        name="requisition_edit",
+    ),
+    path(
         "requisitions/<int:pk>/approve/",
         views.requisition_approve,
         name="requisition_approve",

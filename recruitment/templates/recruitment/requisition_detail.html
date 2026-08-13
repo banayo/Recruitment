@@ -6,7 +6,7 @@
 {% block content %}
 <section class="page">
   <div class="container narrow">
-    <div class="page-header">
+      <div class="page-header">
       <div>
         <h1 class="page-title">คำขอ #{{ requisition.pk }}</h1>
         <p class="page-copy">
@@ -14,7 +14,12 @@
           · {{ requisition.get_priority_display }}
         </p>
       </div>
-      <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">กลับรายการ</a>
+      <div class="cta-group">
+        {% if can_edit %}
+          <a class="btn btn-primary" href="{% url 'recruitment:requisition_edit' requisition.pk %}">แก้ไข</a>
+        {% endif %}
+        <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">กลับรายการ</a>
+      </div>
     </div>
 
     <dl class="detail-grid">
@@ -35,12 +40,20 @@
         <dd>{{ requisition.approved_headcount }}</dd>
       </div>
       <div>
-        <dt>วันที่ต้องการ</dt>
-        <dd>{{ requisition.required_date|default:"—" }}</dd>
+        <dt>ชื่อตำแหน่ง</dt>
+        <dd>{{ requisition.position_title|default:"—" }}</dd>
       </div>
       <div>
-        <dt>ตำแหน่ง</dt>
+        <dt>ตำแหน่ง (master)</dt>
         <dd>{{ requisition.position|default:"ยังไม่ผูก" }}</dd>
+      </div>
+      <div class="full">
+        <dt>ละเอียดงาน</dt>
+        <dd>{{ requisition.job_description|linebreaksbr|default:"—" }}</dd>
+      </div>
+      <div class="full">
+        <dt>หมายเหตุหัวหน้า</dt>
+        <dd>{{ requisition.approver_note|linebreaksbr|default:"—" }}</dd>
       </div>
       <div>
         <dt>ซิงก์โควตาแล้ว</dt>
@@ -54,7 +67,7 @@
 
     {% if can_decide %}
       <div class="panel">
-        <h2 class="panel-title">การอนุมัติ</h2>
+        <h2 class="panel-title">การอนุมัติ{% if is_hr_user %} (HR อนุมัติแทนได้){% endif %}</h2>
         <form method="post" action="{% url 'recruitment:requisition_approve' requisition.pk %}" class="stack-form">
           {% csrf_token %}
           <div class="form-field">
