@@ -741,7 +741,13 @@ a:hover {
   color: #7a5b00;
 }
 
-.badge-approved {
+.badge-manager_approved {
+  background: #e7f0ff;
+  color: #1849a9;
+}
+
+.badge-approved,
+.badge-hr_approved {
   background: var(--color-primary-soft);
   color: var(--color-primary-deep);
 }

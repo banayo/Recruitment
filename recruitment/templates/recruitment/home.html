@@ -25,10 +25,7 @@
       </p>
       <div class="cta-group">
         <a class="btn btn-primary" href="{% url 'recruitment:requisition_create' %}">สร้างคำขออัตรากำลัง</a>
-        <a class="btn btn-outline" href="{% url 'recruitment:approval_inbox' %}">
-          คิวรออนุมัติ
-          {% if pending_approvals_count %}({{ pending_approvals_count }}){% endif %}
-        </a>
+        <a class="btn btn-outline" href="{% url 'recruitment:my_positions' %}">ตำแหน่งในแผนก</a>
       </div>
     </div>
   </div>
@@ -41,34 +38,34 @@
 <section class="band" aria-labelledby="workflow-title">
   <div class="container">
     <h2 class="section-title" id="workflow-title">ขั้นตอนสั้น ๆ</h2>
-    <p class="section-copy">สร้าง → ส่งหัวหน้า → อนุมัติ/ปฏิเสธ → HR ผูกตำแหน่ง</p>
+    <p class="section-copy">ผู้ขอสร้างใบ → หัวหน้าอนุมัติ → ฝ่ายบุคคลอนุมัติและผูกตำแหน่ง</p>
     <ol class="flow-list">
       <li>
         <span class="step">01</span>
         <div>
-          <h3>สร้างคำขอ</h3>
-          <p>ระบุจำนวนคนและความเร่งด่วน</p>
+          <h3>ผู้ขอ · สร้างคำขอ</h3>
+          <p>ระบุชื่อตำแหน่ง จำนวน และละเอียดงาน</p>
         </div>
       </li>
       <li>
         <span class="step">02</span>
         <div>
-          <h3>ส่งหัวหน้า</h3>
-          <p>ระบบกำหนดผู้อนุมัติให้อัตโนมัติ</p>
+          <h3>หัวหน้า · อนุมัติ</h3>
+          <p>สถานะเป็นหัวหน้าอนุมัติแล้ว</p>
         </div>
       </li>
       <li>
         <span class="step">03</span>
         <div>
-          <h3>อนุมัติ</h3>
-          <p>หัวหน้าพิจารณาผ่านคิวรออนุมัติ</p>
+          <h3>HR · อนุมัติแทนหัวหน้า</h3>
+          <p>ถ้าจำเป็น อนุมัติขั้นหัวหน้าแทนได้</p>
         </div>
       </li>
       <li>
         <span class="step">04</span>
         <div>
-          <h3>HR ผูกตำแหน่ง</h3>
-          <p>HR จับคู่ตำแหน่งและอัปเดตโควตา</p>
+          <h3>ฝ่ายบุคคล · อนุมัติ</h3>
+          <p>ผูกตำแหน่ง master แล้วสถานะเป็นฝ่ายบุคคลอนุมัติแล้ว</p>
         </div>
       </li>
     </ol>

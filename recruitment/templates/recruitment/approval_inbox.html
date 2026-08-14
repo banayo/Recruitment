@@ -10,13 +10,25 @@
       <div>
         <h1 class="page-title">คิวรออนุมัติ</h1>
         <p class="page-copy">
-          {% if is_hr_user %}
-            HR เห็นคำขอรออนุมัติทั้งหมด และอนุมัติแทนหัวหน้าได้
+          {% if is_hr_user and approval_scope == "all" %}
+            มุมมอง HR — คำขอรออนุมัติทั้งหมด (อนุมัติแทนหัวหน้าได้)
           {% else %}
-            ใบที่ approver_unid ตรงกับรหัสของคุณ ({{ user.person_unid }})
+            มุมมองหัวหน้า — ใบที่มอบหมายให้คุณ ({{ user.person_unid }})
           {% endif %}
         </p>
       </div>
+      {% if is_hr_user %}
+        <div class="cta-group">
+          <a
+            class="btn {% if approval_scope == 'mine' %}btn-primary{% else %}btn-outline{% endif %}"
+            href="{% url 'recruitment:approval_inbox' %}?scope=mine"
+          >คิวของฉัน</a>
+          <a
+            class="btn {% if approval_scope == 'all' %}btn-primary{% else %}btn-outline{% endif %}"
+            href="{% url 'recruitment:approval_inbox' %}?scope=all"
+          >ทั้งหมด (HR)</a>
+        </div>
+      {% endif %}
     </div>
 
     {% if requisitions %}
@@ -27,8 +39,12 @@
               <th>#</th>
               <th>ผู้ขอ</th>
               <th>ชื่อตำแหน่ง</th>
+              {% if is_hr_user and approval_scope == "all" %}
+                <th>หัวหน้าผู้อนุมัติ</th>
+              {% endif %}
               <th>ฝ่าย / แผนก</th>
               <th>จำนวนที่ขอ</th>
+              <th>สถานะ</th>
               <th>ความเร่งด่วน</th>
               <th></th>
             </tr>
@@ -39,8 +55,12 @@
                 <td>{{ item.pk }}</td>
                 <td>{{ item.requester.nickname|default:item.requester.person_unid }}</td>
                 <td>{{ item.position_title|default:"—" }}</td>
+                {% if is_hr_user and approval_scope == "all" %}
+                  <td>{{ item.approver_unid }}</td>
+                {% endif %}
                 <td>{{ item.requester.division }} / {{ item.requester.department }}</td>
                 <td>{{ item.required_headcount }}</td>
+                <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
                 <td>{{ item.get_priority_display }}</td>
                 <td><a class="btn btn-outline" href="{% url 'recruitment:requisition_detail' item.pk %}">เปิดดู</a></td>
               </tr>

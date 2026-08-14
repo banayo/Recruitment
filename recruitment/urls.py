@@ -30,6 +30,7 @@ urlpatterns = [
         name="requisition_hr_map",
     ),
     path("approvals/", views.approval_inbox, name="approval_inbox"),
+    path("my-positions/", views.my_positions, name="my_positions"),
     # Master data
     path("divisions/", views.division_list, name="division_list"),
     path("divisions/new/", views.division_create, name="division_create"),

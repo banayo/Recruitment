@@ -73,7 +73,6 @@ class RequisitionCreateForm(forms.ModelForm):
             "required_headcount",
             "priority",
             "job_description",
-            "position",
         )
         widgets = {
             "position_title": forms.TextInput(attrs={"class": "text-input"}),
@@ -84,22 +83,16 @@ class RequisitionCreateForm(forms.ModelForm):
             "job_description": forms.Textarea(
                 attrs={"class": "text-input", "rows": 5}
             ),
-            "position": forms.Select(attrs={"class": "text-input"}),
         }
         labels = {
             "position_title": "ชื่อตำแหน่ง",
             "required_headcount": "จำนวนที่ขอ",
             "priority": "ความเร่งด่วน",
             "job_description": "ละเอียดงาน",
-            "position": "ตำแหน่งงาน (ถ้าทราบ)",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["position"].queryset = JobPosition.objects.select_related(
-            "department", "department__division"
-        )
-        self.fields["position"].required = False
         self.fields["job_description"].required = False
         self.fields["position_title"].required = True
 

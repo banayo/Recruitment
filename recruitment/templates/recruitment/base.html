@@ -37,9 +37,13 @@
                 {% endif %}
               </a>
             </li>
+            <li>
+              <a href="{% url 'recruitment:my_positions' %}" class="{% block nav_my_positions %}{% endblock %}">ตำแหน่งในแผนก</a>
+            </li>
           </ul>
         </div>
 
+        {% if is_hr_user %}
         <div class="sidebar-group">
           <p class="sidebar-label">ข้อมูลหลัก</p>
           <ul>
@@ -54,21 +58,18 @@
             </li>
           </ul>
         </div>
+        {% endif %}
       </nav>
 
       <div class="sidebar-footer">
         {% if user.is_authenticated %}
           <div class="sidebar-user">
             <p class="sidebar-user-name">
-              {{ user.first_name|default:user.nickname|default:user.person_unid }}
+              {{user.first_name }} ({{user.person_unid}})
               {% if is_hr_user %}<span class="sidebar-role">HR</span>{% endif %}
             </p>
-            {% if user.division %}
-              <p class="sidebar-meta">ฝ่าย {{ user.division }}</p>
-            {% endif %}
-            {% if user.department %}
-              <p class="sidebar-meta">แผนก {{ user.department }}</p>
-            {% endif %}
+            <p class="sidebar-meta">ฝ่าย {{ user.division|default:"—" }}</p>
+            <p class="sidebar-meta">แผนก {{ user.department|default:"—" }}</p>
           </div>
           <a class="btn btn-outline btn-block" href="{% url 'oidc_logout' %}">ออกจากระบบ</a>
         {% endif %}

@@ -1,4 +1,4 @@
-from .auth import is_hr
+from .auth import require_hr
 from .models import Requisition
 
 
@@ -12,6 +12,6 @@ def recruitment_context(request):
         ).count()
 
     return {
-        "is_hr_user": is_hr(request),
+        "is_hr_user": require_hr(request),
         "pending_approvals_count": pending_approvals,
     }

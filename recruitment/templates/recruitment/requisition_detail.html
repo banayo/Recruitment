@@ -12,6 +12,11 @@
         <p class="page-copy">
           <span class="badge badge-{{ requisition.status }}">{{ requisition.get_status_display }}</span>
           · {{ requisition.get_priority_display }}
+          {% if acting_as_hr %}
+            · <span class="badge badge-pending">HR อนุมัติแทน</span>
+          {% elif is_designated_manager %}
+            · <span class="badge badge-approved">หัวหน้า</span>
+          {% endif %}
         </p>
       </div>
       <div class="cta-group">
@@ -28,7 +33,7 @@
         <dd>{{ requisition.requester.nickname|default:requisition.requester.person_unid }} ({{ requisition.requester.person_unid }})</dd>
       </div>
       <div>
-        <dt>ผู้อนุมัติ (approver_unid)</dt>
+        <dt>หัวหน้าผู้อนุมัติ</dt>
         <dd>{{ requisition.approver_unid }}</dd>
       </div>
       <div>
@@ -44,7 +49,7 @@
         <dd>{{ requisition.position_title|default:"—" }}</dd>
       </div>
       <div>
-        <dt>ตำแหน่ง (master)</dt>
+        <dt>ตำแหน่ง (master · HR)</dt>
         <dd>{{ requisition.position|default:"ยังไม่ผูก" }}</dd>
       </div>
       <div class="full">
@@ -67,7 +72,12 @@
 
     {% if can_decide %}
       <div class="panel">
-        <h2 class="panel-title">การอนุมัติ{% if is_hr_user %} (HR อนุมัติแทนได้){% endif %}</h2>
+        {% if acting_as_hr %}
+          <h2 class="panel-title">HR · อนุมัติแทนหัวหน้า</h2>
+          <p class="page-copy">คุณไม่ใช่หัวหน้าตามสายของใบนี้ — กำลังอนุมัติแทน {{ requisition.approver_unid|default:"—" }} เป็นขั้นหัวหน้า</p>
+        {% else %}
+          <h2 class="panel-title">หัวหน้า · การอนุมัติ</h2>
+        {% endif %}
         <form method="post" action="{% url 'recruitment:requisition_approve' requisition.pk %}" class="stack-form">
           {% csrf_token %}
           <div class="form-field">
@@ -87,7 +97,8 @@
 
     {% if is_hr_user and hr_form %}
       <div class="panel">
-        <h2 class="panel-title">HR · ผูกตำแหน่งและโควตา</h2>
+        <h2 class="panel-title">HR · อนุมัติและผูกตำแหน่ง</h2>
+        <p class="page-copy">ขั้นฝ่ายบุคคล — จับคู่ตำแหน่ง master แล้วสถานะจะเป็นฝ่ายบุคคลอนุมัติแล้ว</p>
         <form method="post" action="{% url 'recruitment:requisition_hr_map' requisition.pk %}" class="stack-form">
           {% csrf_token %}
           {% for field in hr_form %}
@@ -96,7 +107,7 @@
               {{ field }}
             </div>
           {% endfor %}
-          <button type="submit" class="btn btn-primary">บันทึกและซิงก์โควตา</button>
+          <button type="submit" class="btn btn-primary">อนุมัติ (ฝ่ายบุคคล)</button>
         </form>
       </div>
     {% endif %}

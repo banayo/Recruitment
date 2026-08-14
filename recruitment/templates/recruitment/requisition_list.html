@@ -9,7 +9,13 @@
     <div class="page-header">
       <div>
         <h1 class="page-title">คำขออัตรากำลัง</h1>
-        <p class="page-copy">รายการคำขอของคุณ{% if is_hr_user %}และทั้งระบบ (HR){% endif %}</p>
+        <p class="page-copy">
+          {% if is_hr_user %}
+            มุมมอง HR — คำขออัตรากำลังทั้งหมดในระบบ
+          {% else %}
+            มุมมองผู้ใช้ — เฉพาะคำขอที่คุณสร้าง
+          {% endif %}
+        </p>
       </div>
       <a class="btn btn-primary" href="{% url 'recruitment:requisition_create' %}">สร้างคำขอ</a>
     </div>

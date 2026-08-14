@@ -3,12 +3,16 @@ Authentik OIDC login + authorization helpers.
 
 Authentik ส่ง claim:
   role = "HR"   → สิทธิ์ HR
-  (ค่าอื่น / ว่าง) → ไม่ใช่ HR
+  (ค่าอื่น / ว่าง) → ไม่ใช่ HR (ผู้ใช้ทั่วไป / หัวหน้าตามสาย)
 
-เก็บ role บน User ใน DB ตาม claim ตรง ๆ — ไม่ใส่ default
+สิทธิ์แยกชัด:
+  หัวหน้า (designated manager) = person_unid == requisition.approver_unid
+  HR = claim role HR (หรือ superuser)
 """
 
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
+
+from .models import Requisition
 
 HR_ROLE = "HR"
 
@@ -29,7 +33,7 @@ def claim_str(claims, *keys, default=""):
 
 def claim_role(claims):
     """อ่าน role จาก claim ตามที่ Authentik ส่งมา — ไม่ใส่ default."""
-    role = claim_str(claims, "role")# ข้อมูลมี Key ที่ชื่อ "role" ไหม ถ้ามีให้ดึงค่ามา
+    role = claim_str(claims, "role")
     return role.upper() if role else ""
 
 
@@ -37,8 +41,17 @@ def claim_role(claims):
 # Authorization (ใช้ใน views)
 # ---------------------------------------------------------------------------
 
+def user_is_hr(user):
+    """True ถ้าเป็น HR หรือ superuser."""
+    if user is None or not getattr(user, "is_authenticated", False):
+        return False
+    if user.is_superuser:
+        return True
+    return (getattr(user, "role", "") or "").upper() == HR_ROLE
+
+
 def is_hr(request):
-    """user.role == HR หรือไม่."""
+    """request.user เป็น HR หรือไม่ (ไม่รวม superuser — ใช้ user_is_hr / require_hr)."""
     user = getattr(request, "user", None)
     if user is None or not user.is_authenticated:
         return False
@@ -46,41 +59,69 @@ def is_hr(request):
 
 
 def require_hr(request):
-    """True ถ้าเป็น HR หรือ superuser."""
-    user = getattr(request, "user", None)
+    """True ถ้าเป็น HR หรือ superuser — ใช้ล็อกหน้า master / สิทธิ์ HR."""
+    return user_is_hr(getattr(request, "user", None))
+
+
+def is_designated_manager(user, requisition):
+    """หัวหน้าตามสายรายงาน: person_unid ตรง approver_unid ของใบ."""
     if user is None or not user.is_authenticated:
         return False
-    return is_hr(request) or user.is_superuser
-
-
-def can_approve(user, requisition):
-    """หัวหน้า (person_unid == approver_unid) หรือ HR / superuser อนุมัติแทนได้."""
-    if not user.is_authenticated:
-        return False
-    if user.is_superuser or (user.role or "").upper() == HR_ROLE:
-        return True
     if not user.person_unid:
         return False
     return user.person_unid == requisition.approver_unid
 
 
-def can_edit_requisition(user, requisition):
-    """หัวหน้า / HR แก้ไขใบที่ยังรออนุมัติได้."""
-    if requisition.status != requisition.Status.PENDING:
+def can_decide_requisition(user, requisition):
+    """หัวหน้าหรือ HR อนุมัติขั้นหัวหน้าได้เมื่อใบยัง pending."""
+    if requisition.status != Requisition.Status.PENDING:
         return False
-    return can_approve(user, requisition)
+    return is_designated_manager(user, requisition) or user_is_hr(user)
+
+
+def can_reject_requisition(user, requisition):
+    """หัวหน้าปฏิเสธได้ตอน pending; HR ปฏิเสธได้ถึงขั้นหัวหน้าอนุมัติแล้ว."""
+    if requisition.status == Requisition.Status.PENDING:
+        return is_designated_manager(user, requisition) or user_is_hr(user)
+    if requisition.status == Requisition.Status.MANAGER_APPROVED:
+        return user_is_hr(user)
+    return False
+
+
+def can_hr_finalize(user, requisition):
+    """HR ผูกตำแหน่งและอนุมัติขั้นสุดท้ายได้ก่อน hr_approved."""
+    if not user_is_hr(user):
+        return False
+    return requisition.status in (
+        Requisition.Status.PENDING,
+        Requisition.Status.MANAGER_APPROVED,
+    )
+
+
+def can_edit_requisition(user, requisition):
+    """แก้รายละเอียดได้ตอน pending (หัวหน้า/HR) หรือตอนรอ HR (เฉพาะ HR)."""
+    if requisition.status == Requisition.Status.PENDING:
+        return is_designated_manager(user, requisition) or user_is_hr(user)
+    if requisition.status == Requisition.Status.MANAGER_APPROVED:
+        return user_is_hr(user)
+    return False
 
 
 def can_view_requisition(request, requisition):
-    """ดูใบคำขอได้ถ้าเป็น HR / superuser / ผู้สร้าง / ผู้อนุมัติ."""
+    """ดูใบได้ถ้าเป็น HR / ผู้สร้าง / หัวหน้าของใบ."""
     user = request.user
     if not user.is_authenticated:
         return False
-    if is_hr(request) or user.is_superuser:
+    if user_is_hr(user):
         return True
     if requisition.requester_id == user.id:
         return True
-    return can_approve(user, requisition)
+    return is_designated_manager(user, requisition)
+
+
+def can_approve(user, requisition):
+    """alias: หัวหน้าของใบ หรือ HR (ไม่เช็ค status — ใช้ในจุดที่เช็ค status แยก)."""
+    return is_designated_manager(user, requisition) or user_is_hr(user)
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +171,6 @@ class AuthentikOIDCBackend(OIDCAuthenticationBackend):
         user.company_code = claim_str(claims, "company_code")
         user.role = claim_role(claims)
         user.first_name = claim_str(claims, "given_name")
-
 
         email = claim_str(claims, "email")
         if email:

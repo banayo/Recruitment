@@ -6,18 +6,14 @@ from .models import JobPosition, Requisition
 
 @transaction.atomic
 def approve_requisition(requisition, *, approved_headcount=None, position=None):
-    """
-    Manager/HR approval. Headcount sync runs only when approved + position mapped
-    and not yet synced.
-    """
+    """ขั้นหัวหน้า: ตั้ง manager_approved — ยังไม่ซิงก์โควตา."""
     if approved_headcount is None:
         approved_headcount = requisition.required_headcount
 
-    requisition.status = Requisition.Status.APPROVED
+    requisition.status = Requisition.Status.MANAGER_APPROVED
     requisition.approved_headcount = approved_headcount
     if position is not None:
         requisition.position = position
-    _sync_headcount_quota(requisition)
     requisition.save()
     return requisition
 
@@ -32,14 +28,13 @@ def reject_requisition(requisition):
 
 @transaction.atomic
 def map_position_and_sync(requisition, *, position, approved_headcount=None):
-    """HR maps an official JobPosition after (or during) approval."""
+    """ขั้น HR: ผูกตำแหน่ง ตั้ง hr_approved แล้วซิงก์โควตา."""
     requisition.position = position
     if approved_headcount is not None:
         requisition.approved_headcount = approved_headcount
-    if requisition.status == Requisition.Status.PENDING:
-        requisition.status = Requisition.Status.APPROVED
-        if not requisition.approved_headcount:
-            requisition.approved_headcount = requisition.required_headcount
+    if not requisition.approved_headcount:
+        requisition.approved_headcount = requisition.required_headcount
+    requisition.status = Requisition.Status.HR_APPROVED
     _sync_headcount_quota(requisition)
     requisition.save()
     return requisition
@@ -48,7 +43,7 @@ def map_position_and_sync(requisition, *, position, approved_headcount=None):
 def _sync_headcount_quota(requisition):
     if requisition.is_headcount_synced:
         return
-    if requisition.status != Requisition.Status.APPROVED:
+    if requisition.status != Requisition.Status.HR_APPROVED:
         return
     if not requisition.position_id or requisition.approved_headcount <= 0:
         return
