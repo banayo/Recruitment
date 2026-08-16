@@ -16,6 +16,20 @@
       {% endif %}
     </div>
 
+    <form method="get" class="filter-bar">
+      <input
+        class="text-input"
+        type="search"
+        name="q"
+        value="{{ filter_q }}"
+        placeholder="ค้นหาชื่อฝ่าย"
+      >
+      <button type="submit" class="btn btn-primary">กรอง</button>
+      {% if filter_q %}
+        <a class="btn btn-outline" href="{% url 'recruitment:division_list' %}">ล้าง</a>
+      {% endif %}
+    </form>
+
     {% if divisions %}
       <div class="table-wrap">
         <table class="data-table">
@@ -31,7 +45,7 @@
                 <td>{{ item.name }}</td>
                 {% if can_manage %}
                   <td>
-                    <a class="btn btn-outline" href="{% url 'recruitment:division_edit' item.pk %}">แก้ไข</a>
+                    <a class="btn btn-outline btn-sm" href="{% url 'recruitment:division_edit' item.pk %}">แก้ไข</a>
                   </td>
                 {% endif %}
               </tr>
@@ -40,7 +54,11 @@
         </table>
       </div>
     {% else %}
-      <p class="empty-state">ยังไม่มีฝ่าย{% if can_manage %} — <a href="{% url 'recruitment:division_create' %}">เพิ่มฝ่ายแรก</a>{% endif %}</p>
+      {% if filter_q %}
+        <p class="empty-state">ไม่พบฝ่ายที่ตรงกับตัวกรอง — <a href="{% url 'recruitment:division_list' %}">ล้างตัวกรอง</a></p>
+      {% else %}
+        <p class="empty-state">ยังไม่มีฝ่าย{% if can_manage %} — <a href="{% url 'recruitment:division_create' %}">เพิ่มฝ่ายแรก</a>{% endif %}</p>
+      {% endif %}
     {% endif %}
   </div>
 </section>

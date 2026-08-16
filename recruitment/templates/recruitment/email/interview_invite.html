@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="th">
+<body style="font-family: sans-serif; line-height: 1.5; color: #1a1a1a;">
+  <p>เรียน คุณ{{ candidate.first_name_th }} {{ candidate.last_name_th }}</p>
+  <p>ฝ่ายบุคคลขอนัดหมายสัมภาษณ์งานตำแหน่ง <strong>{{ position_title }}</strong></p>
+  <table cellpadding="6" style="border-collapse: collapse;">
+    <tr><td>วันเวลาเริ่ม</td><td>{{ start_display }}</td></tr>
+    <tr><td>วันเวลาสิ้นสุด</td><td>{{ end_display }}</td></tr>
+    <tr><td>ผู้สัมภาษณ์</td><td>{{ application.interviewer_names }}</td></tr>
+    <tr>
+      <td>รูปแบบ</td>
+      <td>
+        {% if application.is_online %}
+          สัมภาษณ์ออนไลน์
+          {% if application.meeting_link %}
+            <br><a href="{{ application.meeting_link }}">{{ application.meeting_link }}</a>
+          {% endif %}
+        {% else %}
+          สัมภาษณ์ ณ สถานที่บริษัท
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+  <p>หากไม่สามารถเข้าร่วมได้ กรุณาติดต่อฝ่ายบุคคล</p>
+  <p>ขอแสดงความนับถือ<br>ฝ่ายบุคคล</p>
+</body>
+</html>

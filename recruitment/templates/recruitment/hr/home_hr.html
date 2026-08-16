@@ -1,0 +1,97 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}แดชบอร์ด HR — ระบบสรรหาบุคลากร{% endblock %}
+{% block nav_home %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">แดชบอร์ดฝ่ายบุคคล</h1>
+        <p class="page-copy">
+          สวัสดี{% if user.nickname %} {{ user.nickname }}{% elif user.first_name %} {{ user.first_name }}{% endif %}
+          — สรุปคิวคำขออัตรากำลังทั้งระบบ
+        </p>
+      </div>
+      <div class="cta-group">
+        <a class="btn btn-primary" href="{% url 'recruitment:check_candidate' %}">ตรวจสอบประวัติผู้สมัคร</a>
+        <a class="btn btn-outline" href="{% url 'recruitment:approval_inbox' %}?scope=all">คิวรออนุมัติ</a>
+        <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">คำขอทั้งหมด</a>
+      </div>
+    </div>
+
+    <div class="dash-metrics" aria-label="สรุปสถานะคำขอ">
+      <a class="dash-metric dash-metric-pending" href="{% url 'recruitment:approval_inbox' %}?scope=all">
+        <span class="dash-metric-value">{{ count_pending }}</span>
+        <span class="dash-metric-label">รอหัวหน้า</span>
+      </a>
+      <a class="dash-metric dash-metric-manager" href="{% url 'recruitment:approval_inbox' %}?scope=all">
+        <span class="dash-metric-value">{{ count_manager_approved }}</span>
+        <span class="dash-metric-label">รอฝ่ายบุคคล</span>
+      </a>
+      <a class="dash-metric dash-metric-hr" href="{% url 'recruitment:requisition_list' %}">
+        <span class="dash-metric-value">{{ count_hr_approved }}</span>
+        <span class="dash-metric-label">ฝ่ายบุคคลอนุมัติแล้ว</span>
+      </a>
+      <a class="dash-metric dash-metric-rejected" href="{% url 'recruitment:requisition_list' %}">
+        <span class="dash-metric-value">{{ count_rejected }}</span>
+        <span class="dash-metric-label">ปฏิเสธ</span>
+      </a>
+    </div>
+
+    <section class="dash-queue" aria-labelledby="hr-queue-title">
+      <div class="page-header">
+        <div>
+          <h2 class="section-title" id="hr-queue-title">รอฝ่ายบุคคลอนุมัติ</h2>
+          <p class="section-copy">ใบที่หัวหน้าอนุมัติแล้ว — ผูกตำแหน่งและอนุมัติขั้นสุดท้าย</p>
+        </div>
+      </div>
+
+      {% if awaiting_hr %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ผู้ขอ</th>
+                <th>ชื่อตำแหน่ง</th>
+                <th>ฝ่าย / แผนก</th>
+                <th>จำนวน</th>
+                <th>อัปเดต</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in awaiting_hr %}
+                <tr>
+                  <td>{{ item.pk }}</td>
+                  <td>{{ item.requester.nickname|default:item.requester.person_unid }}</td>
+                  <td>{{ item.position_title|default:"—" }}</td>
+                  <td>{{ item.requester.division }} / {{ item.requester.department }}</td>
+                  <td>{{ item.approved_headcount|default:item.required_headcount }}</td>
+                  <td>{{ item.updated_at|date:"d/m/Y H:i" }}</td>
+                  <td>
+                    <a class="btn btn-primary" href="{% url 'recruitment:requisition_detail' item.pk %}">ดำเนินการ</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="empty-state">ไม่มีใบรอฝ่ายบุคคลในขณะนี้</p>
+      {% endif %}
+    </section>
+
+    <div class="cta-group" style="margin-top: 28px;">
+      <a class="btn btn-outline" href="{% url 'recruitment:position_list' %}">ตำแหน่งงาน</a>
+      <a class="btn btn-outline" href="{% url 'recruitment:department_list' %}">แผนก</a>
+      <a class="btn btn-outline" href="{% url 'recruitment:division_list' %}">ฝ่าย</a>
+      <a class="btn btn-outline" href="{% url 'recruitment:company_list' %}">บริษัท</a>
+      <a class="btn btn-outline" href="{% url 'recruitment:work_location_list' %}">สถานที่ทำงาน</a>
+      <a class="btn btn-outline" href="{% url 'recruitment:employee_level_list' %}">ระดับพนักงาน</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

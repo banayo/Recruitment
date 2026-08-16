@@ -1,0 +1,42 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}สร้างผู้สมัครใหม่{% endblock %}
+{% block nav_check_candidate %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container narrow">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">ไม่พบประวัติ — สร้างผู้สมัครใหม่</h1>
+        <p class="page-copy">
+          {% if prefill_phone %}
+            ใส่เบอร์ {{ prefill_phone }} ไว้ในฟอร์มแล้ว
+          {% elif prefill_email %}
+            ใส่อีเมล {{ prefill_email }} ไว้ในฟอร์มแล้ว
+          {% else %}
+            กรอกข้อมูลส่วนตัวเพื่อสร้างโปรไฟล์ใหม่
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="stack-form">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="field-error">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="cta-group">
+        <button type="submit" class="btn btn-primary">บันทึกแล้วสมัครตำแหน่ง</button>
+        <a class="btn btn-outline" href="{% url 'recruitment:check_candidate' %}">ยกเลิก</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

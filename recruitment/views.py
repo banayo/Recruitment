@@ -1,32 +1,99 @@
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
+from django.db.models import Count, OuterRef, Q, Subquery
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from .auth import can_decide_requisition, can_edit_requisition, can_hr_finalize, can_reject_requisition, can_view_requisition, is_designated_manager, require_hr, user_is_hr
-from .forms import DepartmentForm, DivisionForm, HRMapForm, JobPositionForm, RequisitionCreateForm, RequisitionDecideForm, RequisitionEditForm
-from .models import Department, Division, JobPosition, Requisition
+from .forms import (
+    CandidateForm,
+    CompanyForm,
+    DepartmentForm,
+    DivisionForm,
+    EmployeeLevelForm,
+    HRMapForm,
+    InterviewForm,
+    JobApplicationEditForm,
+    JobApplicationForm,
+    JobPositionForm,
+    RequisitionCreateForm,
+    RequisitionDecideForm,
+    RequisitionEditForm,
+    WorkLocationForm,
+)
+from .line import build_authorize_url, fetch_line_user_id, line_configured, new_state
+from .mail import interview_end, send_candidate_interview_email, send_interview_calendar
+from .models import (
+    Candidate,
+    Company,
+    Department,
+    Division,
+    EmployeeLevel,
+    JobApplication,
+    JobPosition,
+    Requisition,
+    User,
+    WorkLocation,
+)
 from .services import approve_requisition, map_position_and_sync, reject_requisition
 
 
 @login_required
 def home(request):
+    if user_is_hr(request.user):
+        qs = Requisition.objects.all()
+        awaiting_hr = (
+            Requisition.objects.filter(status=Requisition.Status.MANAGER_APPROVED)
+            .select_related("requester", "position")
+            .order_by("-updated_at")[:10]
+        )
+        return render(
+            request,
+            "recruitment/hr/home_hr.html",
+            {
+                "count_pending": qs.filter(status=Requisition.Status.PENDING).count(),
+                "count_manager_approved": qs.filter(
+                    status=Requisition.Status.MANAGER_APPROVED
+                ).count(),
+                "count_hr_approved": qs.filter(
+                    status=Requisition.Status.HR_APPROVED
+                ).count(),
+                "count_rejected": qs.filter(status=Requisition.Status.REJECTED).count(),
+                "awaiting_hr": awaiting_hr,
+            },
+        )
     return render(request, "recruitment/home.html")
 
 
 @login_required
 def my_positions(request):
-    """Read-only positions in the user's org, for picking a title into a requisition."""
+    """Read-only positions for picking a title into a requisition."""
     division_name = (request.user.division or "").strip()
     department_name = (request.user.department or "").strip()
-    qs = JobPosition.objects.none()
-    
-    if division_name:
-        qs = JobPosition.objects.select_related("department", "department__division").filter(department__division__name__iexact=division_name)
-        if department_name:
-            qs = qs.filter(department__name__iexact=department_name)
-    return render(request, "recruitment/my_positions.html", {"positions": qs, "division_name": division_name, "department_name": department_name})
+    is_hr = user_is_hr(request.user)
+    qs = JobPosition.objects.select_related("department", "department__division")
+    if not is_hr:
+        qs = JobPosition.objects.none()
+        if division_name:
+            qs = JobPosition.objects.select_related(
+                "department", "department__division"
+            ).filter(department__division__name__iexact=division_name)
+            if department_name:
+                qs = qs.filter(department__name__iexact=department_name)
+    return render(
+        request,
+        "recruitment/my_positions.html",
+        {
+            "positions": qs,
+            "division_name": division_name,
+            "department_name": department_name,
+            "show_all": is_hr,
+        },
+    )
 
 
 @login_required
@@ -38,10 +105,31 @@ def requisition_list(request):
         qs = Requisition.objects.filter(requester=request.user).select_related(
             "requester", "position"
         )
+    q = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    priority = request.GET.get("priority", "").strip()
+    if q:
+        qs = qs.filter(
+            Q(position_title__icontains=q)
+            | Q(requester__nickname__icontains=q)
+            | Q(requester__person_unid__icontains=q)
+            | Q(approver_unid__icontains=q)
+        )
+    if status:
+        qs = qs.filter(status=status)
+    if priority:
+        qs = qs.filter(priority=priority)
     return render(
         request,
         "recruitment/requisition_list.html",
-        {"requisitions": qs},
+        {
+            "requisitions": qs,
+            "filter_q": q,
+            "filter_status": status,
+            "filter_priority": priority,
+            "status_choices": Requisition.Status.choices,
+            "priority_choices": Requisition.Priority.choices,
+        },
     )
 
 
@@ -88,6 +176,7 @@ def requisition_create(request):
 
 @login_required
 def requisition_edit(request, pk):
+    """Edit a requisition."""
     requisition = get_object_or_404(Requisition, pk=pk)
     if not can_edit_requisition(request.user, requisition):
         return HttpResponseForbidden("ไม่มีสิทธิ์แก้ไขคำขอนี้")
@@ -127,6 +216,7 @@ def requisition_edit(request, pk):
 
 @login_required
 def requisition_detail(request, pk):
+    """Detail of a requisition."""
     requisition = get_object_or_404(
         Requisition.objects.select_related("requester", "position"),
         pk=pk,
@@ -165,6 +255,7 @@ def requisition_detail(request, pk):
 
 @login_required
 def approval_inbox(request):
+    """List of requisitions for the user to approve."""
     is_hr_user = user_is_hr(request.user)
     if is_hr_user:
         statuses = [
@@ -273,12 +364,17 @@ def requisition_hr_map(request, pk):
 def division_list(request):
     if not require_hr(request):
         return HttpResponseForbidden("เฉพาะ HR")
+    qs = Division.objects.all()
+    q = request.GET.get("q", "").strip()
+    if q:
+        qs = qs.filter(name__icontains=q)
     return render(
         request,
-        "recruitment/division_list.html",
+        "recruitment/hr/division_list.html",
         {
-            "divisions": Division.objects.all(),
+            "divisions": qs,
             "can_manage": True,
+            "filter_q": q,
         },
     )
 
@@ -294,7 +390,7 @@ def division_create(request):
         return redirect("recruitment:division_list")
     return render(
         request,
-        "recruitment/master_form.html",
+        "recruitment/hr/master_form.html",
         {
             "form": form,
             "page_title": "เพิ่มฝ่าย",
@@ -317,7 +413,7 @@ def division_edit(request, pk):
         return redirect("recruitment:division_list")
     return render(
         request,
-        "recruitment/master_form.html",
+        "recruitment/hr/master_form.html",
         {
             "form": form,
             "page_title": f"แก้ไขฝ่าย {division.name}",
@@ -332,12 +428,24 @@ def division_edit(request, pk):
 def department_list(request):
     if not require_hr(request):
         return HttpResponseForbidden("เฉพาะ HR")
+    qs = Department.objects.select_related("division")
+    q = request.GET.get("q", "").strip()
+    division_id = request.GET.get("division", "").strip()
+    if q:
+        qs = qs.filter(name__icontains=q)
+    if division_id.isdigit():
+        qs = qs.filter(division_id=int(division_id))
+    else:
+        division_id = ""
     return render(
         request,
-        "recruitment/department_list.html",
+        "recruitment/hr/department_list.html",
         {
-            "departments": Department.objects.select_related("division"),
+            "departments": qs,
             "can_manage": True,
+            "filter_q": q,
+            "filter_division": division_id,
+            "divisions": Division.objects.all(),
         },
     )
 
@@ -353,7 +461,7 @@ def department_create(request):
         return redirect("recruitment:department_list")
     return render(
         request,
-        "recruitment/master_form.html",
+        "recruitment/hr/master_form.html",
         {
             "form": form,
             "page_title": "เพิ่มแผนก",
@@ -376,7 +484,7 @@ def department_edit(request, pk):
         return redirect("recruitment:department_list")
     return render(
         request,
-        "recruitment/master_form.html",
+        "recruitment/hr/master_form.html",
         {
             "form": form,
             "page_title": f"แก้ไขแผนก {department.name}",
@@ -391,14 +499,34 @@ def department_edit(request, pk):
 def position_list(request):
     if not require_hr(request):
         return HttpResponseForbidden("เฉพาะ HR")
+    qs = JobPosition.objects.select_related("department", "department__division")
+    q = request.GET.get("q", "").strip()
+    division_id = request.GET.get("division", "").strip()
+    department_id = request.GET.get("department", "").strip()
+    if q:
+        qs = qs.filter(title__icontains=q)
+    if division_id.isdigit():
+        qs = qs.filter(department__division_id=int(division_id))
+    else:
+        division_id = ""
+    departments = Department.objects.select_related("division")
+    if division_id:
+        departments = departments.filter(division_id=int(division_id))
+    if department_id.isdigit():
+        qs = qs.filter(department_id=int(department_id))
+    else:
+        department_id = ""
     return render(
         request,
-        "recruitment/position_list.html",
+        "recruitment/hr/position_list.html",
         {
-            "positions": JobPosition.objects.select_related(
-                "department", "department__division"
-            ),
+            "positions": qs,
             "can_manage": True,
+            "filter_q": q,
+            "filter_division": division_id,
+            "filter_department": department_id,
+            "divisions": Division.objects.all(),
+            "departments": departments,
         },
     )
 
@@ -414,7 +542,7 @@ def position_create(request):
         return redirect("recruitment:position_list")
     return render(
         request,
-        "recruitment/master_form.html",
+        "recruitment/hr/master_form.html",
         {
             "form": form,
             "page_title": "เพิ่มตำแหน่งงาน",
@@ -437,7 +565,7 @@ def position_edit(request, pk):
         return redirect("recruitment:position_list")
     return render(
         request,
-        "recruitment/master_form.html",
+        "recruitment/hr/master_form.html",
         {
             "form": form,
             "page_title": f"แก้ไขตำแหน่ง {position.title}",
@@ -446,3 +574,567 @@ def position_edit(request, pk):
             "active_nav": "positions",
         },
     )
+
+
+def _hr_named_master_list(
+    request,
+    *,
+    queryset,
+    list_url,
+    create_url,
+    edit_url,
+    page_title,
+    page_copy,
+    add_label,
+    search_placeholder,
+    active_nav,
+):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    q = request.GET.get("q", "").strip()
+    active = request.GET.get("active", "").strip()
+    qs = queryset
+    if q:
+        qs = qs.filter(name__icontains=q)
+    if active == "1":
+        qs = qs.filter(is_active=True)
+    elif active == "0":
+        qs = qs.filter(is_active=False)
+    else:
+        active = ""
+    return render(
+        request,
+        "recruitment/hr/named_master_list.html",
+        {
+            "items": qs,
+            "can_manage": True,
+            "filter_q": q,
+            "filter_active": active,
+            "list_url": list_url,
+            "create_url": create_url,
+            "edit_url": edit_url,
+            "page_title": page_title,
+            "page_copy": page_copy,
+            "add_label": add_label,
+            "search_placeholder": search_placeholder,
+            "active_nav": active_nav,
+        },
+    )
+
+
+def _hr_named_master_form(
+    request,
+    *,
+    form_class,
+    instance,
+    list_url,
+    page_title,
+    page_copy,
+    success_message,
+    active_nav,
+):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    form = form_class(request.POST or None, instance=instance)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, success_message)
+        return redirect(list_url)
+    return render(
+        request,
+        "recruitment/hr/master_form.html",
+        {
+            "form": form,
+            "page_title": page_title,
+            "page_copy": page_copy,
+            "cancel_url": list_url,
+            "active_nav": active_nav,
+        },
+    )
+
+
+@login_required
+def company_list(request):
+    return _hr_named_master_list(
+        request,
+        queryset=Company.objects.all().order_by("name"),
+        list_url="recruitment:company_list",
+        create_url="recruitment:company_create",
+        edit_url="recruitment:company_edit",
+        page_title="บริษัท",
+        page_copy="Master Company — ใช้ตอนบันทึกประวัติพนักงาน",
+        add_label="เพิ่มบริษัท",
+        search_placeholder="ค้นหาชื่อบริษัท",
+        active_nav="companies",
+    )
+
+
+@login_required
+def company_create(request):
+    return _hr_named_master_form(
+        request,
+        form_class=CompanyForm,
+        instance=None,
+        list_url="recruitment:company_list",
+        page_title="เพิ่มบริษัท",
+        page_copy="สร้างบริษัทใน master data",
+        success_message="เพิ่มบริษัทแล้ว",
+        active_nav="companies",
+    )
+
+
+@login_required
+def company_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    company = get_object_or_404(Company, pk=pk)
+    return _hr_named_master_form(
+        request,
+        form_class=CompanyForm,
+        instance=company,
+        list_url="recruitment:company_list",
+        page_title=f"แก้ไขบริษัท {company.name}",
+        page_copy="อัปเดตชื่อหรือสถานะใช้งาน",
+        success_message="บันทึกบริษัทแล้ว",
+        active_nav="companies",
+    )
+
+
+@login_required
+def work_location_list(request):
+    return _hr_named_master_list(
+        request,
+        queryset=WorkLocation.objects.all().order_by("name"),
+        list_url="recruitment:work_location_list",
+        create_url="recruitment:work_location_create",
+        edit_url="recruitment:work_location_edit",
+        page_title="สถานที่ทำงาน",
+        page_copy="Master WorkLocation — สถานที่ปฏิบัติงาน",
+        add_label="เพิ่มสถานที่",
+        search_placeholder="ค้นหาสถานที่ทำงาน",
+        active_nav="locations",
+    )
+
+
+@login_required
+def work_location_create(request):
+    return _hr_named_master_form(
+        request,
+        form_class=WorkLocationForm,
+        instance=None,
+        list_url="recruitment:work_location_list",
+        page_title="เพิ่มสถานที่ทำงาน",
+        page_copy="สร้างสถานที่ใน master data",
+        success_message="เพิ่มสถานที่ทำงานแล้ว",
+        active_nav="locations",
+    )
+
+
+@login_required
+def work_location_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    location = get_object_or_404(WorkLocation, pk=pk)
+    return _hr_named_master_form(
+        request,
+        form_class=WorkLocationForm,
+        instance=location,
+        list_url="recruitment:work_location_list",
+        page_title=f"แก้ไขสถานที่ {location.name}",
+        page_copy="อัปเดตชื่อหรือสถานะใช้งาน",
+        success_message="บันทึกสถานที่ทำงานแล้ว",
+        active_nav="locations",
+    )
+
+
+@login_required
+def employee_level_list(request):
+    return _hr_named_master_list(
+        request,
+        queryset=EmployeeLevel.objects.all().order_by("name"),
+        list_url="recruitment:employee_level_list",
+        create_url="recruitment:employee_level_create",
+        edit_url="recruitment:employee_level_edit",
+        page_title="ระดับพนักงาน",
+        page_copy="Master EmployeeLevel — ระดับ/เกรดพนักงาน",
+        add_label="เพิ่มระดับ",
+        search_placeholder="ค้นหาระดับพนักงาน",
+        active_nav="levels",
+    )
+
+
+@login_required
+def employee_level_create(request):
+    return _hr_named_master_form(
+        request,
+        form_class=EmployeeLevelForm,
+        instance=None,
+        list_url="recruitment:employee_level_list",
+        page_title="เพิ่มระดับพนักงาน",
+        page_copy="สร้างระดับใน master data",
+        success_message="เพิ่มระดับพนักงานแล้ว",
+        active_nav="levels",
+    )
+
+
+@login_required
+def employee_level_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    level = get_object_or_404(EmployeeLevel, pk=pk)
+    return _hr_named_master_form(
+        request,
+        form_class=EmployeeLevelForm,
+        instance=level,
+        list_url="recruitment:employee_level_list",
+        page_title=f"แก้ไขระดับ {level.name}",
+        page_copy="อัปเดตชื่อหรือสถานะใช้งาน",
+        success_message="บันทึกระดับพนักงานแล้ว",
+        active_nav="levels",
+    )
+
+
+@login_required
+def line_connect(request):
+    if not line_configured():
+        messages.error(request, "ยังไม่ได้ตั้งค่า LINE Login ใน .env")
+        return redirect("recruitment:home")
+    state = new_state()
+    request.session["line_oauth_state"] = state
+    return redirect(build_authorize_url(state))
+
+
+@login_required
+@require_GET
+def line_callback(request):
+    if request.GET.get("error"):
+        messages.error(request, "ยกเลิกการเชื่อม LINE หรือ LINE ปฏิเสธการเข้าถึง")
+        return redirect("recruitment:home")
+    state = request.GET.get("state", "")
+    code = request.GET.get("code", "")
+    expected = request.session.pop("line_oauth_state", "")
+    if not code or not state or state != expected:
+        messages.error(request, "การเชื่อม LINE ไม่ถูกต้อง (state)")
+        return redirect("recruitment:home")
+    try:
+        line_user_id = fetch_line_user_id(code)
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect("recruitment:home")
+
+    taken = (
+        User.objects.filter(line_user_id=line_user_id)
+        .exclude(pk=request.user.pk)
+        .exists()
+    )
+    if taken:
+        messages.error(request, "บัญชี LINE นี้ถูกผูกกับผู้ใช้อื่นแล้ว")
+        return redirect("recruitment:home")
+
+    try:
+        request.user.line_user_id = line_user_id
+        request.user.save(update_fields=["line_user_id"])
+    except IntegrityError:
+        messages.error(request, "บันทึก LINE userId ไม่สำเร็จ")
+        return redirect("recruitment:home")
+
+    messages.success(request, "เชื่อม LINE สำหรับแจ้งเตือนแล้ว")
+    return redirect("recruitment:home")
+
+
+@login_required
+@require_POST
+def line_disconnect(request):
+    request.user.line_user_id = None
+    request.user.save(update_fields=["line_user_id"])
+    messages.success(request, "ยกเลิกการเชื่อม LINE แล้ว")
+    return redirect("recruitment:home")
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: candidate duplicate check (HR)
+# ---------------------------------------------------------------------------
+
+@login_required
+def list_candidate(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    latest_status = (
+        JobApplication.objects.filter(candidate_id=OuterRef("pk"))
+        .order_by("-created_at")
+        .values("status")[:1]
+    )
+    qs = Candidate.objects.annotate(
+        application_count=Count("applications"),
+        latest_status=Subquery(latest_status),
+    )
+    q = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    if q:
+        qs = qs.filter(
+            Q(first_name_th__icontains=q)
+            | Q(last_name_th__icontains=q)
+            | Q(nickname__icontains=q)
+            | Q(phone_number__icontains=q)
+            | Q(email__icontains=q)
+            | Q(idcard__icontains=q)
+        )
+    if status:
+        qs = qs.filter(latest_status=status)
+    return render(
+        request,
+        "recruitment/hr/candidate_list.html",
+        {
+            "candidates": qs,
+            "filter_q": q,
+            "filter_status": status,
+            "status_choices": JobApplication.Status.choices,
+        },
+    )
+
+
+@login_required
+def list_job_application(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    qs = JobApplication.objects.select_related(
+        "candidate",
+        "position",
+        "position__department",
+        "position__department__division",
+    )
+    q = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    position_id = request.GET.get("position", "").strip()
+    if q:
+        qs = qs.filter(
+            Q(candidate__first_name_th__icontains=q)
+            | Q(candidate__last_name_th__icontains=q)
+            | Q(candidate__nickname__icontains=q)
+            | Q(candidate__phone_number__icontains=q)
+            | Q(candidate__email__icontains=q)
+            | Q(position__title__icontains=q)
+            | Q(origin__icontains=q)
+        )
+    if status:
+        qs = qs.filter(status=status)
+    if position_id.isdigit():
+        qs = qs.filter(position_id=int(position_id))
+    else:
+        position_id = ""
+    return render(
+        request,
+        "recruitment/hr/job_application_list.html",
+        {
+            "applications": qs,
+            "filter_q": q,
+            "filter_status": status,
+            "filter_position": position_id,
+            "status_choices": JobApplication.Status.choices,
+            "positions": JobPosition.objects.select_related(
+                "department", "department__division"
+            ),
+        },
+    )
+
+
+@login_required
+def job_application_detail(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    application = get_object_or_404(
+        JobApplication.objects.select_related(
+            "candidate",
+            "position",
+            "position__department",
+            "position__department__division",
+        ).prefetch_related(
+            "candidate__acquaintances",
+            "candidate__guarantors",
+            "candidate__studies",
+        ),
+        pk=pk,
+    )
+    candidate = application.candidate
+    interview_end_at = None
+    if application.appointment_date:
+        interview_end_at = interview_end(application.appointment_date)
+    return render(
+        request,
+        "recruitment/hr/job_application_detail.html",
+        {
+            "application": application,
+            "candidate": candidate,
+            "interview_end_at": interview_end_at,
+        },
+    )
+
+
+@login_required
+def job_application_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    application = get_object_or_404(
+        JobApplication.objects.select_related("candidate", "position"),
+        pk=pk,
+    )
+    candidate = application.candidate
+    if request.method == "POST":
+        candidate_form = CandidateForm(
+            request.POST, request.FILES, instance=candidate, prefix="candidate"
+        )
+        application_form = JobApplicationEditForm(
+            request.POST, request.FILES, instance=application, prefix="app"
+        )
+        if candidate_form.is_valid() and application_form.is_valid():
+            candidate_form.save()
+            application_form.save()
+            messages.success(request, "บันทึกข้อมูลใบสมัครแล้ว")
+            return redirect("recruitment:job_application_detail", pk=application.pk)
+    else:
+        candidate_form = CandidateForm(instance=candidate, prefix="candidate")
+        application_form = JobApplicationEditForm(instance=application, prefix="app")
+    return render(
+        request,
+        "recruitment/hr/job_application_edit.html",
+        {
+            "application": application,
+            "candidate": candidate,
+            "candidate_form": candidate_form,
+            "application_form": application_form,
+        },
+    )
+
+
+@login_required
+def schedule_interview(request, application_id):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    application = get_object_or_404(
+        JobApplication.objects.select_related("candidate", "position"),
+        pk=application_id,
+    )
+    if application.status != JobApplication.Status.APPLIED:
+        messages.error(request, "นัดสัมภาษณ์ได้เฉพาะใบสมัครสถานะสมัครใหม่")
+        return redirect("recruitment:list_job_application")
+
+    if request.method == "POST":
+        form = InterviewForm(request.POST, instance=application)
+        if form.is_valid():
+            scheduled = form.save(commit=False)
+            scheduled.status = JobApplication.Status.INTERVIEWING
+            scheduled.save()
+            notes = []
+            try:
+                sent, dest = send_candidate_interview_email(scheduled)
+                notes.append(f"เมลผู้สมัคร: {dest}" if sent else dest)
+            except Exception:
+                notes.append("ส่งเมลผู้สมัครไม่สำเร็จ")
+            try:
+                sent_cal, cal_dest = send_interview_calendar(scheduled)
+                notes.append(f"ปฏิทิน .ics: {cal_dest}" if sent_cal else cal_dest)
+            except Exception:
+                notes.append("ส่งไฟล์ปฏิทินไม่สำเร็จ")
+            messages.success(request, "นัดสัมภาษณ์แล้ว — " + " · ".join(notes))
+            return redirect("recruitment:job_application_detail", pk=application.pk)
+    else:
+        form = InterviewForm(instance=application)
+
+    return render(
+        request,
+        "recruitment/hr/schedule_interview.html",
+        {"form": form, "application": application},
+    )
+
+
+@login_required
+def check_candidate(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    if request.method != "POST":
+        return render(request, "recruitment/hr/check_candidate.html")
+
+    search_term = (request.POST.get("search_term") or "").strip()
+    if not search_term:
+        messages.error(request, "กรอกอีเมลหรือเบอร์โทรศัพท์")
+        return render(request, "recruitment/hr/check_candidate.html")
+
+    if "@" in search_term:
+        candidate = Candidate.objects.filter(email=search_term).first()
+        not_found_params = {"email": search_term}
+    else:
+        candidate = Candidate.objects.filter(phone_number=search_term).first()
+        not_found_params = {"phone": search_term}
+
+    if candidate:
+        return redirect(
+            "recruitment:create_application_for_existing",
+            candidate_id=candidate.pk,
+        )
+
+    url = reverse("recruitment:create_new_candidate")
+    return redirect(f"{url}?{urlencode(not_found_params)}")
+
+
+@login_required
+def create_application_for_existing(request, candidate_id):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    candidate = get_object_or_404(Candidate, id=candidate_id)
+    past_applications = candidate.applications.select_related(
+        "position", "position__department", "position__department__division"
+    ).order_by("-created_at")
+
+    if request.method == "POST":
+        form = JobApplicationForm(request.POST, request.FILES)
+        if form.is_valid():
+            application = form.save(commit=False)
+            application.candidate = candidate
+            application.save()
+            messages.success(request, f"สร้างใบสมัครให้ {candidate} แล้ว")
+            return redirect("recruitment:home")
+    else:
+        form = JobApplicationForm()
+
+    return render(
+        request,
+        "recruitment/hr/existing_candidate.html",
+        {
+            "candidate": candidate,
+            "past_applications": past_applications,
+            "form": form,
+        },
+    )
+
+
+@login_required
+def create_new_candidate(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+
+    initial = {}
+    phone = (request.GET.get("phone") or "").strip()
+    email = (request.GET.get("email") or "").strip()
+    if phone:
+        initial["phone_number"] = phone
+    if email:
+        initial["email"] = email
+
+    if request.method == "POST":
+        form = CandidateForm(request.POST, request.FILES)
+        if form.is_valid():
+            candidate = form.save()
+            messages.success(request, f"สร้างโปรไฟล์ {candidate} แล้ว")
+            return redirect(
+                "recruitment:create_application_for_existing",
+                candidate_id=candidate.pk,
+            )
+    else:
+        form = CandidateForm(initial=initial)
+
+    return render(
+        request,
+        "recruitment/hr/create_new_candidate.html",
+        {"form": form, "prefill_phone": phone, "prefill_email": email},
+    )
+

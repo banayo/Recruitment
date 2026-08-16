@@ -1,0 +1,97 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}สมัครตำแหน่งให้ {{ candidate }}{% endblock %}
+{% block nav_check_candidate %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">ผู้สมัครรายเดิม</h1>
+        <p class="page-copy">ใช้โปรไฟล์ที่มีอยู่สร้างใบสมัครตำแหน่งใหม่ โดยไม่ต้องกรอกข้อมูลส่วนตัวซ้ำ</p>
+      </div>
+      <a class="btn btn-outline" href="{% url 'recruitment:check_candidate' %}">ค้นหาอีกครั้ง</a>
+    </div>
+
+    <div class="split-screen">
+      <aside class="split-pane split-pane-profile">
+        <article class="surface-card">
+          <h2 class="surface-card-title">โปรไฟล์ผู้สมัคร</h2>
+          <dl class="profile-facts">
+            <div>
+              <dt>ชื่อ</dt>
+              <dd>{{ candidate }}</dd>
+            </div>
+            <div>
+              <dt>เบอร์โทรศัพท์</dt>
+              <dd>{{ candidate.phone_number|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt>อีเมล</dt>
+              <dd>{{ candidate.email|default:"—" }}</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="surface-card">
+          <h2 class="surface-card-title">ประวัติการสมัครเก่า</h2>
+          {% if past_applications %}
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ตำแหน่งงาน</th>
+                    <th>วันที่สมัคร</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for app in past_applications %}
+                    <tr>
+                      <td>
+                        {{ app.position.title }}
+                        {% if app.position.department %}
+                          <span class="muted">{{ app.position.department.division }} / {{ app.position.department }}</span>
+                        {% endif %}
+                      </td>
+                      <td>{{ app.applied_date|date:"d/m/Y H:i" }}</td>
+                      <td>
+                        <span class="badge badge-{{ app.status }}">{{ app.get_status_display }}</span>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <p class="empty-state">ยังไม่มีประวัติการสมัคร</p>
+          {% endif %}
+        </article>
+      </aside>
+
+      <div class="split-pane split-pane-form">
+        <article class="surface-card">
+          <h2 class="surface-card-title">สมัครตำแหน่งใหม่</h2>
+          <form method="post" enctype="multipart/form-data" class="stack-form">
+            {% csrf_token %}
+            {% for field in form %}
+              <div class="form-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                  <p class="field-error">{{ field.errors|striptags }}</p>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <div class="cta-group">
+              <button type="submit" class="btn btn-primary">สร้างใบสมัคร</button>
+              <a class="btn btn-outline" href="{% url 'recruitment:home' %}">ยกเลิก</a>
+            </div>
+          </form>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

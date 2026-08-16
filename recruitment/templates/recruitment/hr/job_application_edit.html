@@ -1,0 +1,48 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}แก้ไขใบสมัคร #{{ application.pk }}{% endblock %}
+{% block nav_applications %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container narrow">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">แก้ไขใบสมัคร #{{ application.pk }}</h1>
+        <p class="page-copy">{{ candidate }} · {{ application.position.title }}</p>
+      </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="stack-form">
+      {% csrf_token %}
+
+      <h2 class="surface-card-title">ข้อมูลผู้สมัคร</h2>
+      {% for field in candidate_form %}
+        <div class="form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="field-error">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <h2 class="surface-card-title">ข้อมูลใบสมัคร</h2>
+      {% for field in application_form %}
+        <div class="form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="field-error">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+      <div class="cta-group">
+        <button type="submit" class="btn btn-primary">บันทึก</button>
+        <a class="btn btn-outline" href="{% url 'recruitment:job_application_detail' application.pk %}">ยกเลิก</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

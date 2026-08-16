@@ -1,0 +1,89 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}ผู้สมัคร{% endblock %}
+{% block nav_candidates %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">ผู้สมัคร</h1>
+        <p class="page-copy">รายชื่อโปรไฟล์ในระบบ — สมัครตำแหน่งใหม่ได้จากคนเดิมโดยไม่กรอกข้อมูลซ้ำ</p>
+      </div>
+      <a class="btn btn-primary" href="{% url 'recruitment:check_candidate' %}">ตรวจสอบประวัติ / สร้างใหม่</a>
+    </div>
+
+    <form method="get" class="filter-bar">
+      <input
+        class="text-input"
+        type="search"
+        name="q"
+        value="{{ filter_q }}"
+        placeholder="ค้นหาชื่อ / เบอร์ / อีเมล / เลขบัตร"
+      >
+      <select class="text-input" name="status">
+        <option value="">ทุกสถานะใบสมัครล่าสุด</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if filter_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary">กรอง</button>
+      {% if filter_q or filter_status %}
+        <a class="btn btn-outline" href="{% url 'recruitment:list_candidate' %}">ล้าง</a>
+      {% endif %}
+    </form>
+
+    {% if candidates %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ชื่อ</th>
+              <th>เบอร์โทรศัพท์</th>
+              <th>อีเมล</th>
+              <th>เลขบัตร</th>
+              <th>สถานะล่าสุด</th>
+              <th>ใบสมัคร</th>
+              <th>สร้างเมื่อ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in candidates %}
+              <tr>
+                <td>{{ item }}{% if item.nickname %} ({{ item.nickname }}){% endif %}</td>
+                <td>{{ item.phone_number }}</td>
+                <td>{{ item.email|default:"—" }}</td>
+                <td>{{ item.idcard|default:"—" }}</td>
+                <td>
+                  {% if item.latest_status %}
+                    {% for value, label in status_choices %}
+                      {% if item.latest_status == value %}
+                        <span class="badge badge-{{ value }}">{{ label }}</span>
+                      {% endif %}
+                    {% endfor %}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>{{ item.application_count }}</td>
+                <td>{{ item.created_at|date:"d/m/Y H:i" }}</td>
+                <td>
+                  <a class="btn btn-outline btn-sm" href="{% url 'recruitment:create_application_for_existing' item.pk %}">สมัครตำแหน่ง</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% if filter_q or filter_status %}
+        <p class="empty-state">ไม่พบผู้สมัครที่ตรงกับตัวกรอง — <a href="{% url 'recruitment:list_candidate' %}">ล้างตัวกรอง</a></p>
+      {% else %}
+        <p class="empty-state">ยังไม่มีผู้สมัคร — <a href="{% url 'recruitment:check_candidate' %}">ตรวจสอบประวัติก่อนสร้าง</a></p>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

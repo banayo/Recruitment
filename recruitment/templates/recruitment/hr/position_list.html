@@ -1,0 +1,85 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}ตำแหน่งงาน{% endblock %}
+{% block nav_positions %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">ตำแหน่งงาน</h1>
+        <p class="page-copy">Master JobPosition — โควตาและจำนวนคนปัจจุบัน</p>
+      </div>
+      {% if can_manage %}
+        <a class="btn btn-primary" href="{% url 'recruitment:position_create' %}">เพิ่มตำแหน่ง</a>
+      {% endif %}
+    </div>
+
+    <form method="get" class="filter-bar">
+      <input
+        class="text-input"
+        type="search"
+        name="q"
+        value="{{ filter_q }}"
+        placeholder="ค้นหาชื่อตำแหน่ง"
+      >
+      <select class="text-input" name="division" onchange="this.form.submit()">
+        <option value="">ทุกฝ่าย</option>
+        {% for item in divisions %}
+          <option value="{{ item.pk }}" {% if filter_division == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+      <select class="text-input" name="department">
+        <option value="">ทุกแผนก</option>
+        {% for item in departments %}
+          <option value="{{ item.pk }}" {% if filter_department == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary">กรอง</button>
+      {% if filter_q or filter_division or filter_department %}
+        <a class="btn btn-outline" href="{% url 'recruitment:position_list' %}">ล้าง</a>
+      {% endif %}
+    </form>
+
+    {% if positions %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ชื่อตำแหน่ง</th>
+              <th>ฝ่าย</th>
+              <th>แผนก</th>
+              <th>คนปัจจุบัน</th>
+              <th>โควตาเปิดรับ</th>
+              {% if can_manage %}<th></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in positions %}
+              <tr>
+                <td>{{ item.title }}</td>
+                <td>{{ item.department.division.name }}</td>
+                <td>{{ item.department.name }}</td>
+                <td>{{ item.current_headcount }}</td>
+                <td>{{ item.target_headcount }}</td>
+                {% if can_manage %}
+                  <td>
+                    <a class="btn btn-outline btn-sm" href="{% url 'recruitment:position_edit' item.pk %}">แก้ไข</a>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% if filter_q or filter_division or filter_department %}
+        <p class="empty-state">ไม่พบตำแหน่งที่ตรงกับตัวกรอง — <a href="{% url 'recruitment:position_list' %}">ล้างตัวกรอง</a></p>
+      {% else %}
+        <p class="empty-state">ยังไม่มีตำแหน่ง{% if can_manage %} — <a href="{% url 'recruitment:position_create' %}">เพิ่มตำแหน่งแรก</a>{% endif %}</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

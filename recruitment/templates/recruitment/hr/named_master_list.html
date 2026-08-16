@@ -1,0 +1,80 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+{% block nav_companies %}{% if active_nav == "companies" %}is-active{% endif %}{% endblock %}
+{% block nav_locations %}{% if active_nav == "locations" %}is-active{% endif %}{% endblock %}
+{% block nav_levels %}{% if active_nav == "levels" %}is-active{% endif %}{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{{ page_title }}</h1>
+        <p class="page-copy">{{ page_copy }}</p>
+      </div>
+      {% if can_manage %}
+        <a class="btn btn-primary" href="{% url create_url %}">{{ add_label }}</a>
+      {% endif %}
+    </div>
+
+    <form method="get" class="filter-bar">
+      <input
+        class="text-input"
+        type="search"
+        name="q"
+        value="{{ filter_q }}"
+        placeholder="{{ search_placeholder }}"
+      >
+      <select class="text-input" name="active">
+        <option value="">ทุกสถานะ</option>
+        <option value="1" {% if filter_active == "1" %}selected{% endif %}>เปิดใช้งาน</option>
+        <option value="0" {% if filter_active == "0" %}selected{% endif %}>ปิดใช้งาน</option>
+      </select>
+      <button type="submit" class="btn btn-primary">กรอง</button>
+      {% if filter_q or filter_active %}
+        <a class="btn btn-outline" href="{% url list_url %}">ล้าง</a>
+      {% endif %}
+    </form>
+
+    {% if items %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ชื่อ</th>
+              <th>สถานะ</th>
+              {% if can_manage %}<th></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              <tr>
+                <td>{{ item.name }}</td>
+                <td>
+                  {% if item.is_active %}
+                    <span class="badge badge-hired">เปิดใช้งาน</span>
+                  {% else %}
+                    <span class="badge badge-cancelled">ปิดใช้งาน</span>
+                  {% endif %}
+                </td>
+                {% if can_manage %}
+                  <td>
+                    <a class="btn btn-outline btn-sm" href="{% url edit_url item.pk %}">แก้ไข</a>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% if filter_q or filter_active %}
+        <p class="empty-state">ไม่พบรายการที่ตรงกับตัวกรอง — <a href="{% url list_url %}">ล้างตัวกรอง</a></p>
+      {% else %}
+        <p class="empty-state">ยังไม่มีรายการ{% if can_manage %} — <a href="{% url create_url %}">{{ add_label }}</a>{% endif %}</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

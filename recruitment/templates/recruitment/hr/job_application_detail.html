@@ -1,0 +1,251 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}ใบสมัคร #{{ application.pk }} — {{ candidate }}{% endblock %}
+{% block nav_applications %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">ใบสมัคร #{{ application.pk }}</h1>
+        <p class="page-copy">
+          <span class="badge badge-{{ application.status }}">{{ application.get_status_display }}</span>
+          · {{ application.position.title }}
+        </p>
+      </div>
+      <div class="cta-group">
+        <a class="btn btn-primary" href="{% url 'recruitment:job_application_edit' application.pk %}">แก้ไข</a>
+        {% if application.status == "applied" %}
+          <a class="btn btn-outline" href="{% url 'recruitment:schedule_interview' application.pk %}">นัดสัมภาษณ์</a>
+        {% endif %}
+        <a class="btn btn-outline" href="{% url 'recruitment:list_job_application' %}">กลับรายการ</a>
+      </div>
+    </div>
+
+    <article class="surface-card" style="margin-bottom: 20px;">
+      <h2 class="surface-card-title">ข้อมูลผู้สมัคร</h2>
+      {% if candidate.profile_picture %}
+        <p>
+          <img src="{{ candidate.profile_picture.url }}" alt="รูปถ่าย" width="120" height="120" style="object-fit: cover; border-radius: 12px;">
+        </p>
+      {% endif %}
+      <dl class="detail-grid">
+        <div>
+          <dt>คำนำหน้า</dt>
+          <dd>{{ candidate.title_name_th|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>ชื่อ (ไทย)</dt>
+          <dd>{{ candidate.first_name_th }}</dd>
+        </div>
+        <div>
+          <dt>นามสกุล (ไทย)</dt>
+          <dd>{{ candidate.last_name_th }}</dd>
+        </div>
+        <div>
+          <dt>ชื่อเล่น</dt>
+          <dd>{{ candidate.nickname|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>เบอร์โทรศัพท์</dt>
+          <dd>{{ candidate.phone_number }}</dd>
+        </div>
+        <div>
+          <dt>เบอร์สำรอง</dt>
+          <dd>{{ candidate.phone_number1|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>อีเมล</dt>
+          <dd>{{ candidate.email|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>เลขบัตรประชาชน</dt>
+          <dd>{{ candidate.idcard|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>เพศ</dt>
+          <dd>{{ candidate.sex|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>วันเกิด</dt>
+          <dd>{{ candidate.birthday|date:"d/m/Y"|default:"—" }}</dd>
+        </div>
+      </dl>
+    </article>
+
+    <article class="surface-card" style="margin-bottom: 20px;">
+      <h2 class="surface-card-title">ข้อมูลใบสมัคร</h2>
+      <dl class="detail-grid">
+        <div>
+          <dt>ตำแหน่ง</dt>
+          <dd>
+            {{ application.position.title }}
+            {% if application.position.department %}
+              <span class="muted">{{ application.position.department.division }} / {{ application.position.department }}</span>
+            {% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt>แหล่งที่มา</dt>
+          <dd>{{ application.origin|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>วันที่สมัคร</dt>
+          <dd>{{ application.applied_date|date:"d/m/Y H:i" }}</dd>
+        </div>
+        <div>
+          <dt>Resume</dt>
+          <dd>
+            {% if application.resume %}
+              <a href="{{ application.resume.url }}" target="_blank" rel="noopener">เปิดไฟล์</a>
+            {% else %}
+              —
+            {% endif %}
+          </dd>
+        </div>
+        <div>
+          <dt>Portfolio</dt>
+          <dd>
+            {% if application.portfolio %}
+              <a href="{{ application.portfolio.url }}" target="_blank" rel="noopener">เปิดไฟล์</a>
+            {% else %}
+              —
+            {% endif %}
+          </dd>
+        </div>
+        <div class="full">
+          <dt>บันทึกจาก HR</dt>
+          <dd>{{ application.hr_note|linebreaksbr|default:"—" }}</dd>
+        </div>
+      </dl>
+    </article>
+
+    <article class="surface-card" style="margin-bottom: 20px;">
+      <h2 class="surface-card-title">นัดสัมภาษณ์</h2>
+      {% if application.appointment_date %}
+        <dl class="detail-grid">
+          <div>
+            <dt>เวลาเริ่ม</dt>
+            <dd>{{ application.appointment_date|date:"d/m/Y H:i" }}</dd>
+          </div>
+          <div>
+            <dt>เวลาสิ้นสุด</dt>
+            <dd>{{ interview_end_at|date:"d/m/Y H:i" }}</dd>
+          </div>
+          <div>
+            <dt>ผู้สัมภาษณ์</dt>
+            <dd>{{ application.interviewer_names|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>อีเมลผู้สัมภาษณ์หลัก</dt>
+            <dd>{{ application.interviewer_email|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>อีเมลผู้สัมภาษณ์เพิ่มเติม</dt>
+            <dd>{{ application.ccmail|default:"—" }}</dd>
+          </div>
+          <div>
+            <dt>สัมภาษณ์ออนไลน์</dt>
+            <dd>{{ application.is_online|yesno:"ใช่,ไม่ใช่" }}</dd>
+          </div>
+          <div>
+            <dt>ลิงก์ประชุม</dt>
+            <dd>
+              {% if application.meeting_link %}
+                <a href="{{ application.meeting_link }}" target="_blank" rel="noopener">{{ application.meeting_link }}</a>
+              {% else %}
+                —
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      {% else %}
+        <p class="empty-state">ยังไม่ได้นัดสัมภาษณ์</p>
+      {% endif %}
+    </article>
+
+    {% if candidate.studies.all %}
+      <article class="surface-card" style="margin-bottom: 20px;">
+        <h2 class="surface-card-title">ประวัติการศึกษา</h2>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ระดับ</th>
+                <th>สถาบัน</th>
+                <th>สาขา</th>
+                <th>ปีที่จบ</th>
+                <th>GPA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in candidate.studies.all %}
+                <tr>
+                  <td>{{ item.get_education_display }}</td>
+                  <td>{{ item.institution }}</td>
+                  <td>{{ item.major|default:"—" }}</td>
+                  <td>{{ item.graduation|default:"—" }}</td>
+                  <td>{{ item.grade|default:"—" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    {% endif %}
+
+    {% if candidate.acquaintances.all %}
+      <article class="surface-card" style="margin-bottom: 20px;">
+        <h2 class="surface-card-title">บุคคลอ้างอิง</h2>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ชื่อ</th>
+                <th>เบอร์</th>
+                <th>ความสัมพันธ์</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in candidate.acquaintances.all %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.phone_number }}</td>
+                  <td>{{ item.get_relation_display|default:"—" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    {% endif %}
+
+    {% if candidate.guarantors.all %}
+      <article class="surface-card">
+        <h2 class="surface-card-title">ผู้ค้ำประกัน</h2>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ชื่อ</th>
+                <th>เบอร์</th>
+                <th>ความสัมพันธ์</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in candidate.guarantors.all %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.phone_number }}</td>
+                  <td>{{ item.get_relation_display|default:"—" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

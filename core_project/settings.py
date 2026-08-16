@@ -85,6 +85,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -131,4 +133,28 @@ if OIDC_OP_JWKS_ENDPOINT.rstrip("/").endswith("/application/o/jwks"):
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "0") == "1"
 CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
+# LINE Login — link LINE userId to the current Authentik user (notifications later)
+LINE_LOGIN_CHANNEL_ID = os.getenv("LINE_LOGIN_CHANNEL_ID", "")
+LINE_LOGIN_CHANNEL_SECRET = os.getenv("LINE_LOGIN_CHANNEL_SECRET", "")
+LINE_LOGIN_REDIRECT_URI = os.getenv(
+    "LINE_LOGIN_REDIRECT_URI", "http://localhost:8000/line/callback/"
+)
+LINE_MESSAGING_CHANNEL_ACCESS_TOKEN = os.getenv(
+    "LINE_MESSAGING_CHANNEL_ACCESS_TOKEN", ""
+)
+
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "1") == "1"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "0") == "1"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", "HR Recruitment <hr@example.com>"
+)
+HR_CALENDAR_EMAIL = os.getenv("HR_CALENDAR_EMAIL", "")
 

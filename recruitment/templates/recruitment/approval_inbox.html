@@ -62,7 +62,7 @@
                 <td>{{ item.required_headcount }}</td>
                 <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
                 <td>{{ item.get_priority_display }}</td>
-                <td><a class="btn btn-outline" href="{% url 'recruitment:requisition_detail' item.pk %}">เปิดดู</a></td>
+                <td><a class="btn btn-outline btn-sm" href="{% url 'recruitment:requisition_detail' item.pk %}">เปิดดู</a></td>
               </tr>
             {% endfor %}
           </tbody>

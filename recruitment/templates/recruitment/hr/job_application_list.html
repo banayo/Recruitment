@@ -1,0 +1,93 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}ใบสมัครงาน{% endblock %}
+{% block nav_applications %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">ใบสมัครงาน</h1>
+        <p class="page-copy">รายการสมัครตำแหน่งทั้งหมด — กรองตามสถานะ ผู้สมัคร หรือตำแหน่ง</p>
+      </div>
+      <a class="btn btn-primary" href="{% url 'recruitment:check_candidate' %}">ตรวจสอบประวัติ / สร้างใหม่</a>
+    </div>
+
+    <form method="get" class="filter-bar">
+      <input
+        class="text-input"
+        type="search"
+        name="q"
+        value="{{ filter_q }}"
+        placeholder="ค้นหาชื่อ / เบอร์ / อีเมล / ตำแหน่ง"
+      >
+      <select class="text-input" name="status">
+        <option value="">ทุกสถานะ</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if filter_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select class="text-input" name="position">
+        <option value="">ทุกตำแหน่ง</option>
+        {% for item in positions %}
+          <option value="{{ item.pk }}" {% if filter_position == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.title }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary">กรอง</button>
+      {% if filter_q or filter_status or filter_position %}
+        <a class="btn btn-outline" href="{% url 'recruitment:list_job_application' %}">ล้าง</a>
+      {% endif %}
+    </form>
+
+    {% if applications %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ผู้สมัคร</th>
+              <th>เบอร์</th>
+              <th>ตำแหน่ง</th>
+              <th>แหล่งที่มา</th>
+              <th>สถานะ</th>
+              <th>วันที่สมัคร</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in applications %}
+              <tr>
+                <td>{{ item.candidate }}</td>
+                <td>{{ item.candidate.phone_number }}</td>
+                <td>
+                  {{ item.position.title }}
+                  {% if item.position.department %}
+                    <span class="muted">{{ item.position.department.division }} / {{ item.position.department }}</span>
+                  {% endif %}
+                </td>
+                <td>{{ item.origin|default:"—" }}</td>
+                <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
+                <td>{{ item.applied_date|date:"d/m/Y H:i" }}</td>
+                <td>
+                  <div class="cta-group">
+                    {% if item.status == "applied" %}
+                      <a class="btn btn-primary btn-sm" href="{% url 'recruitment:schedule_interview' item.pk %}">นัดสัมภาษณ์</a>
+                    {% endif %}
+                    <a class="btn btn-outline btn-sm" href="{% url 'recruitment:job_application_detail' item.pk %}">ดูรายละเอียด</a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      {% if filter_q or filter_status or filter_position %}
+        <p class="empty-state">ไม่พบใบสมัครที่ตรงกับตัวกรอง — <a href="{% url 'recruitment:list_job_application' %}">ล้างตัวกรอง</a></p>
+      {% else %}
+        <p class="empty-state">ยังไม่มีใบสมัคร — <a href="{% url 'recruitment:check_candidate' %}">เริ่มจากตรวจสอบประวัติ</a></p>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

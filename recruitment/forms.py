@@ -1,6 +1,36 @@
 from django import forms
 
-from .models import Department, Division, JobPosition, Requisition
+from .models import Candidate, Company, Department, Division, EmployeeLevel, JobApplication, JobPosition, Requisition, WorkLocation
+
+
+class CompanyForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = ("name", "is_active")
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "text-input"}),
+        }
+        labels = {"name": "ชื่อบริษัท", "is_active": "เปิดใช้งาน"}
+
+
+class WorkLocationForm(forms.ModelForm):
+    class Meta:
+        model = WorkLocation
+        fields = ("name", "is_active")
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "text-input"}),
+        }
+        labels = {"name": "สถานที่ทำงาน", "is_active": "เปิดใช้งาน"}
+
+
+class EmployeeLevelForm(forms.ModelForm):
+    class Meta:
+        model = EmployeeLevel
+        fields = ("name", "is_active")
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "text-input"}),
+        }
+        labels = {"name": "ระดับพนักงาน", "is_active": "เปิดใช้งาน"}
 
 
 class DivisionForm(forms.ModelForm):
@@ -195,3 +225,159 @@ class HRMapForm(forms.Form):
             )
             if requisition.position_id:
                 self.fields["position"].initial = requisition.position_id
+
+
+class JobApplicationForm(forms.ModelForm):
+    class Meta:
+        model = JobApplication
+        fields = ("position", "origin", "resume", "portfolio", "hr_note")
+        widgets = {
+            "position": forms.Select(attrs={"class": "text-input"}),
+            "origin": forms.TextInput(
+                attrs={"class": "text-input", "placeholder": "เช่น JobThai, Walk-in"}
+            ),
+            "resume": forms.ClearableFileInput(attrs={"class": "text-input"}),
+            "portfolio": forms.ClearableFileInput(attrs={"class": "text-input"}),
+            "hr_note": forms.Textarea(attrs={"class": "text-input", "rows": 4}),
+        }
+        labels = {
+            "position": "ตำแหน่งที่สมัคร",
+            "origin": "แหล่งที่มา",
+            "resume": "ไฟล์ Resume",
+            "portfolio": "ไฟล์ Portfolio",
+            "hr_note": "บันทึกจาก HR",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["position"].queryset = JobPosition.objects.select_related(
+            "department", "department__division"
+        )
+        self.fields["position"].label_from_instance = self._position_label
+        self.fields["origin"].required = False
+        self.fields["resume"].required = False
+        self.fields["portfolio"].required = False
+        self.fields["hr_note"].required = False
+
+    @staticmethod
+    def _position_label(obj):
+        dept = obj.department
+        division = dept.division.name if dept and dept.division_id else ""
+        dept_name = dept.name if dept else ""
+        org = " / ".join(part for part in (division, dept_name) if part)
+        return f"{obj.title} ({org})" if org else obj.title
+
+
+class JobApplicationEditForm(JobApplicationForm):
+    class Meta(JobApplicationForm.Meta):
+        fields = (
+            "position",
+            "origin",
+            "status",
+            "resume",
+            "portfolio",
+            "hr_note",
+        )
+        widgets = {
+            **JobApplicationForm.Meta.widgets,
+            "status": forms.Select(attrs={"class": "text-input"}),
+        }
+        labels = {
+            **JobApplicationForm.Meta.labels,
+            "status": "สถานะใบสมัคร",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["status"].required = True
+
+
+class InterviewForm(forms.ModelForm):
+    class Meta:
+        model = JobApplication
+        fields = (
+            "appointment_date",
+            "interviewer_names",
+            "interviewer_email",
+            "ccmail",
+            "is_online",
+            "meeting_link",
+        )
+        widgets = {
+            "appointment_date": forms.DateTimeInput(
+                attrs={
+                    "class": "text-input form-control",
+                    "type": "datetime-local",
+                },
+                format="%Y-%m-%dT%H:%M",
+            ),
+            "interviewer_names": forms.TextInput(attrs={"class": "text-input form-control"}),
+            "interviewer_email": forms.EmailInput(attrs={"class": "text-input form-control"}),
+            "ccmail": forms.TextInput(
+                attrs={
+                    "class": "text-input form-control",
+                    "placeholder": "head@company.com, other@company.com",
+                }
+            ),
+            "meeting_link": forms.URLInput(attrs={"class": "text-input form-control"}),
+        }
+        labels = {
+            "appointment_date": "วันและเวลาเริ่มนัดหมาย",
+            "interviewer_names": "ผู้สัมภาษณ์",
+            "interviewer_email": "อีเมลผู้สัมภาษณ์หลัก",
+            "ccmail": "อีเมลผู้สัมภาษณ์เพิ่มเติม",
+            "is_online": "สัมภาษณ์ออนไลน์",
+            "meeting_link": "ลิงก์ประชุม",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["appointment_date"].required = True
+        self.fields["appointment_date"].input_formats = [
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+        ]
+        self.fields["interviewer_names"].required = True
+        self.fields["interviewer_email"].required = True
+        self.fields["ccmail"].required = False
+        self.fields["ccmail"].help_text = "คั่นด้วยจุลภาคเมื่อมีผู้สัมภาษณ์มากกว่า 1 คน"
+        self.fields["meeting_link"].required = False
+
+
+class CandidateForm(forms.ModelForm):
+    class Meta:
+        model = Candidate
+        fields = (
+            "title_name_th",
+            "first_name_th",
+            "last_name_th",
+            "nickname",
+            "phone_number",
+            "phone_number1",
+            "email",
+            "idcard",
+            "sex",
+            "birthday",
+            "profile_picture",
+        )
+        widgets = {
+            "title_name_th": forms.TextInput(attrs={"class": "text-input"}),
+            "first_name_th": forms.TextInput(attrs={"class": "text-input"}),
+            "last_name_th": forms.TextInput(attrs={"class": "text-input"}),
+            "nickname": forms.TextInput(attrs={"class": "text-input"}),
+            "phone_number": forms.TextInput(attrs={"class": "text-input"}),
+            "phone_number1": forms.TextInput(attrs={"class": "text-input"}),
+            "email": forms.EmailInput(attrs={"class": "text-input"}),
+            "idcard": forms.TextInput(attrs={"class": "text-input"}),
+            "sex": forms.TextInput(attrs={"class": "text-input"}),
+            "birthday": forms.DateInput(attrs={"class": "text-input", "type": "date"}),
+            "profile_picture": forms.ClearableFileInput(attrs={"class": "text-input"}),
+        }
+
+    def clean_email(self):
+        value = (self.cleaned_data.get("email") or "").strip()
+        return value or None
+
+    def clean_phone_number(self):
+        return (self.cleaned_data.get("phone_number") or "").strip()

@@ -1,0 +1,35 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}ตรวจสอบประวัติผู้สมัคร{% endblock %}
+{% block nav_check_candidate %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container narrow">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">ตรวจสอบประวัติผู้สมัคร</h1>
+        <p class="page-copy">ค้นหาด้วยอีเมลหรือเบอร์โทรศัพท์ก่อนสร้างโปรไฟล์ใหม่ เพื่อกันข้อมูลซ้ำ</p>
+      </div>
+    </div>
+
+    <form method="post" class="stack-form">
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="id_search_term">อีเมลหรือเบอร์โทรศัพท์</label>
+        <input
+          id="id_search_term"
+          type="text"
+          name="search_term"
+          required
+          autocomplete="off"
+          placeholder="กรอกอีเมล หรือ เบอร์โทรศัพท์"
+        >
+      </div>
+      <div class="cta-group">
+        <button type="submit" class="btn btn-primary">ตรวจสอบประวัติ</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

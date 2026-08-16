@@ -1,0 +1,18 @@
+เรียน คุณ{{ candidate.first_name_th }} {{ candidate.last_name_th }}
+
+ฝ่ายบุคคลขอนัดหมายสัมภาษณ์งานตำแหน่ง {{ position_title }}
+
+วันเวลาเริ่ม: {{ start_display }}
+วันเวลาสิ้นสุด: {{ end_display }}
+ผู้สัมภาษณ์: {{ application.interviewer_names }}
+{% if application.is_online %}
+รูปแบบ: สัมภาษณ์ออนไลน์
+{% if application.meeting_link %}ลิงก์ประชุม: {{ application.meeting_link }}{% endif %}
+{% else %}
+รูปแบบ: สัมภาษณ์ ณ สถานที่บริษัท
+{% endif %}
+
+หากไม่สามารถเข้าร่วมได้ กรุณาติดต่อฝ่ายบุคคล
+
+ขอแสดงความนับถือ
+ฝ่ายบุคคล

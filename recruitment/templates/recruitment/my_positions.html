@@ -10,7 +10,9 @@
       <div>
         <h1 class="page-title">ตำแหน่งในแผนก</h1>
         <p class="page-copy">
-          {% if division_name %}
+          {% if show_all %}
+            มุมมอง HR — ตำแหน่งทั้งหมด กดใช้ตำแหน่งเพื่อนำไปกรอกใบขออัตรากำลัง
+          {% elif division_name %}
             ฝ่าย {{ division_name }}{% if department_name %} · แผนก {{ department_name }}{% endif %}
             — กดใช้ตำแหน่งเพื่อนำไปกรอกใบขออัตรากำลัง
           {% else %}
@@ -43,7 +45,7 @@
                 <td>{{ item.target_headcount }}</td>
                 <td>
                   <a
-                    class="btn btn-primary"
+                    class="btn btn-primary btn-sm"
                     href="{% url 'recruitment:requisition_create' %}?title={{ item.title|urlencode }}{% if item.description %}&description={{ item.description|urlencode }}{% endif %}"
                   >ใช้ตำแหน่งนี้</a>
                 </td>
@@ -52,6 +54,8 @@
           </tbody>
         </table>
       </div>
+    {% elif show_all %}
+      <p class="empty-state">ยังไม่มีตำแหน่งในระบบ</p>
     {% elif division_name %}
       <p class="empty-state">ยังไม่มีตำแหน่งที่ชื่อฝ่าย{% if department_name %} / แผนก{% endif %} ตรงกับบัญชีของคุณ</p>
     {% else %}
