@@ -12,6 +12,9 @@ htmlcov/
 
 # Env & secrets
 .env
+secrets/
+*.pickle
+credentials.json
 
 # Uploaded files
 media/

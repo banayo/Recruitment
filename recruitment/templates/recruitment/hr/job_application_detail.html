@@ -18,6 +18,8 @@
         <a class="btn btn-primary" href="{% url 'recruitment:job_application_edit' application.pk %}">แก้ไข</a>
         {% if application.status == "applied" %}
           <a class="btn btn-outline" href="{% url 'recruitment:schedule_interview' application.pk %}">นัดสัมภาษณ์</a>
+        {% elif application.status == "interviewing" %}
+          <a class="btn btn-outline" href="{% url 'recruitment:schedule_interview' application.pk %}">แก้ไขนัดสัมภาษณ์</a>
         {% endif %}
         <a class="btn btn-outline" href="{% url 'recruitment:list_job_application' %}">กลับรายการ</a>
       </div>
@@ -126,12 +128,8 @@
       {% if application.appointment_date %}
         <dl class="detail-grid">
           <div>
-            <dt>เวลาเริ่ม</dt>
+            <dt>วันและเวลาเริ่มนัดหมาย</dt>
             <dd>{{ application.appointment_date|date:"d/m/Y H:i" }}</dd>
-          </div>
-          <div>
-            <dt>เวลาสิ้นสุด</dt>
-            <dd>{{ interview_end_at|date:"d/m/Y H:i" }}</dd>
           </div>
           <div>
             <dt>ผู้สัมภาษณ์</dt>

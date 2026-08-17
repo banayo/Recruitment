@@ -293,6 +293,17 @@ class JobApplicationEditForm(JobApplicationForm):
 
 
 class InterviewForm(forms.ModelForm):
+    send_candidate_email = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="ส่งเมลหาผู้สมัคร (Candidate)",
+    )
+    add_google_calendar = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="เพิ่มนัดใน Google Calendar",
+    )
+
     class Meta:
         model = JobApplication
         fields = (
@@ -343,6 +354,18 @@ class InterviewForm(forms.ModelForm):
         self.fields["ccmail"].required = False
         self.fields["ccmail"].help_text = "คั่นด้วยจุลภาคเมื่อมีผู้สัมภาษณ์มากกว่า 1 คน"
         self.fields["meeting_link"].required = False
+        self.order_fields(
+            [
+                "appointment_date",
+                "interviewer_names",
+                "interviewer_email",
+                "ccmail",
+                "is_online",
+                "meeting_link",
+                "send_candidate_email",
+                "add_google_calendar",
+            ]
+        )
 
 
 class CandidateForm(forms.ModelForm):

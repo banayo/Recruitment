@@ -72,6 +72,8 @@
                   <div class="cta-group">
                     {% if item.status == "applied" %}
                       <a class="btn btn-primary btn-sm" href="{% url 'recruitment:schedule_interview' item.pk %}">นัดสัมภาษณ์</a>
+                    {% elif item.status == "interviewing" %}
+                      <a class="btn btn-outline btn-sm" href="{% url 'recruitment:schedule_interview' item.pk %}">แก้ไขนัด</a>
                     {% endif %}
                     <a class="btn btn-outline btn-sm" href="{% url 'recruitment:job_application_detail' item.pk %}">ดูรายละเอียด</a>
                   </div>

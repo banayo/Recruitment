@@ -26,7 +26,11 @@ from .forms import (
     WorkLocationForm,
 )
 from .line import build_authorize_url, fetch_line_user_id, line_configured, new_state
-from .mail import interview_end, send_candidate_interview_email, send_interview_calendar
+from .mail import (
+    create_interview_google_calendar,
+    interview_end,
+    send_candidate_interview_email,
+)
 from .models import (
     Candidate,
     Company,
@@ -1014,9 +1018,12 @@ def schedule_interview(request, application_id):
         JobApplication.objects.select_related("candidate", "position"),
         pk=application_id,
     )
-    if application.status != JobApplication.Status.APPLIED:
-        messages.error(request, "นัดสัมภาษณ์ได้เฉพาะใบสมัครสถานะสมัครใหม่")
-        return redirect("recruitment:list_job_application")
+    if application.status not in (
+        JobApplication.Status.APPLIED,
+        JobApplication.Status.INTERVIEWING,
+    ):
+        messages.error(request, "แก้ไขนัดสัมภาษณ์ได้เฉพาะสถานะสมัครใหม่หรือนัดสัมภาษณ์")
+        return redirect("recruitment:job_application_detail", pk=application.pk)
 
     if request.method == "POST":
         form = InterviewForm(request.POST, instance=application)
@@ -1024,18 +1031,20 @@ def schedule_interview(request, application_id):
             scheduled = form.save(commit=False)
             scheduled.status = JobApplication.Status.INTERVIEWING
             scheduled.save()
-            notes = []
-            try:
-                sent, dest = send_candidate_interview_email(scheduled)
-                notes.append(f"เมลผู้สมัคร: {dest}" if sent else dest)
-            except Exception:
-                notes.append("ส่งเมลผู้สมัครไม่สำเร็จ")
-            try:
-                sent_cal, cal_dest = send_interview_calendar(scheduled)
-                notes.append(f"ปฏิทิน .ics: {cal_dest}" if sent_cal else cal_dest)
-            except Exception:
-                notes.append("ส่งไฟล์ปฏิทินไม่สำเร็จ")
-            messages.success(request, "นัดสัมภาษณ์แล้ว — " + " · ".join(notes))
+            notes = ["บันทึกวันนัดหมายแล้ว"]
+            if form.cleaned_data.get("add_google_calendar"):
+                try:
+                    sent_cal, cal_dest = create_interview_google_calendar(scheduled)
+                    notes.append(f"Google Calendar: {cal_dest}" if sent_cal else cal_dest)
+                except Exception as exc:
+                    notes.append(f"สร้างนัดใน Google Calendar ไม่สำเร็จ ({exc})")
+            if form.cleaned_data.get("send_candidate_email"):
+                try:
+                    sent, dest = send_candidate_interview_email(scheduled)
+                    notes.append(f"เมลผู้สมัคร: {dest}" if sent else dest)
+                except Exception as exc:
+                    notes.append(f"ส่งเมลผู้สมัครไม่สำเร็จ ({exc})")
+            messages.success(request, " · ".join(notes))
             return redirect("recruitment:job_application_detail", pk=application.pk)
     else:
         form = InterviewForm(instance=application)

@@ -1,27 +1,69 @@
 <!DOCTYPE html>
 <html lang="th">
-<body style="font-family: sans-serif; line-height: 1.5; color: #1a1a1a;">
-  <p>เรียน คุณ{{ candidate.first_name_th }} {{ candidate.last_name_th }}</p>
-  <p>ฝ่ายบุคคลขอนัดหมายสัมภาษณ์งานตำแหน่ง <strong>{{ position_title }}</strong></p>
-  <table cellpadding="6" style="border-collapse: collapse;">
-    <tr><td>วันเวลาเริ่ม</td><td>{{ start_display }}</td></tr>
-    <tr><td>วันเวลาสิ้นสุด</td><td>{{ end_display }}</td></tr>
-    <tr><td>ผู้สัมภาษณ์</td><td>{{ application.interviewer_names }}</td></tr>
-    <tr>
-      <td>รูปแบบ</td>
-      <td>
-        {% if application.is_online %}
-          สัมภาษณ์ออนไลน์
-          {% if application.meeting_link %}
-            <br><a href="{{ application.meeting_link }}">{{ application.meeting_link }}</a>
-          {% endif %}
-        {% else %}
-          สัมภาษณ์ ณ สถานที่บริษัท
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เรียนเชิญสัมภาษณ์งาน</title>
+</head>
+<body>
+    <p>เรื่อง: เรียนเชิญสัมภาษณ์งาน ตำแหน่ง {{ position_title }}</p>
+
+    {% if candidate.first_name %}
+    <p>เรียน {{ candidate.first_name }} {{ candidate.last_name }}</p>
+    {% else %}
+    <p>เรียน {{ candidate.first_name_th }} {{ candidate.last_name_th }}</p>
+    {% endif %}
+
+    <p>สิ่งที่แนบมาด้วย:</p>
+    <ul>
+        <li>แผนที่บริษัท (mapkarmarts.jpg)</li>
+        <li>ใบสมัครงาน (FM-HMR-RC04_compressed.pdf) — กรุณากรอกและส่งก่อนสัมภาษณ์</li>
+    </ul>
+
+    <p>
+        ตามที่บริษัท คาร์มาร์ท จำกัด (มหาชน) ได้พิจารณาประวัติเบื้องต้น (ผ่านทาง e-mail)
+        เห็นว่าประสบการณ์และคุณสมบัติของท่านตรงกับตำแหน่งที่บริษัทฯ กำลังเปิดรับ
+        จึงขอเชิญท่านเข้าสัมภาษณ์งานในตำแหน่ง {{ position_title }} ใน {{ start_display }}
+        (สิ้นสุดประมาณ {{ end_display }})
+    </p>
+
+    {% if application.is_online %}
+    <p>
+        สัมภาษณ์งาน Online
+        {% if application.meeting_link %}
+        <br>Link - <a href="{{ application.meeting_link }}">สัมภาษณ์ออนไลน์</a>
         {% endif %}
-      </td>
-    </tr>
-  </table>
-  <p>หากไม่สามารถเข้าร่วมได้ กรุณาติดต่อฝ่ายบุคคล</p>
-  <p>ขอแสดงความนับถือ<br>ฝ่ายบุคคล</p>
+    </p>
+    {% endif %}
+
+    <p>ผู้สัมภาษณ์งาน {{ application.interviewer_names }}</p>
+
+    <p>เอกสารประกอบการสมัครงาน:</p>
+    <ul>
+        <li>ประวัติย่อ + รูปถ่าย 1 ชุด</li>
+        <li>สำเนาบัตรประชาชน 1 ชุด</li>
+        <li>สำเนาทะเบียนบ้าน 1 ชุด</li>
+        <li>สำเนาวุฒิการศึกษา 1 ชุด</li>
+        <li>เอกสารประกอบอื่นๆ เช่น หนังสือรับรองการทำงาน, ประกาศนียบัตร ต่างๆ (ถ้ามี)</li>
+    </ul>
+
+    <p>แผนที่บริษัท: <a href="https://goo.gl/maps/gfe1zikwpPNaV2Vq7?coh=178573&entry=tt">แผนที่</a></p>
+
+    <p>รบกวนผู้สมัครตอบกลับอีเมล์เพื่อยืนยันการสัมภาษณ์งานในครั้งนี้ หากขัดข้องประการใดโปรดแจ้งให้ทราบล่วงหน้าติดต่อได้ที่ คุณกิตติเทพ (เทพ) หมายเลขโทรศัพท์ 083-134-2346</p>
+
+    <p>ขอขอบคุณผู้สมัครที่ให้ความสนใจและสละเวลาอันมีค่าของท่านเข้ารับการสัมภาษณ์งานกับทางบริษัทฯ ในครั้งนี้</p>
+
+    <p>ขอแสดงความนับถือ</p>
+    <p>HMR Department | HMR Division</p>
+    <p>แผนกทรัพยากรบุคคล | ฝ่ายทรัพยากรบุคคล</p>
+    <p>Tel: +662-8052756 Till 60 Ext 2315 | Mobile: 086-885-2388 | Fax: +662-8052751 Till 52 |</p>
+    <br>
+    <img src="https://online.karmarts.com/media/wysiwyg/intro-page/head-logo.png" alt="Company Logo" width="150"/>
+    <p>บริษัท คาร์มาร์ท จำกัด (มหาชน)<br>
+        81-81/1 ซ.เพชรเกษม 54 แยก 3 แขวงบางด้วน เขตภาษีเจริญ กทม. 10160<br>
+        KARMARTS PUBLIC COMPANY LIMITED<br>
+        81-81/1 Soi Phetchakasem 54 Yak 3, Bangduan, Phasicharoen, Bangkok, Thailand 10160<br>
+        <a href="http://www.karmarts.com">www.karmarts.com</a> | <a href="http://www.karmarts.co.th">www.karmarts.co.th</a>
+    </p>
 </body>
 </html>

@@ -640,6 +640,24 @@ a:hover {
   border-color: var(--color-ink);
 }
 
+.form-field-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-field-check input[type="checkbox"] {
+  width: 18px;
+  min-height: 18px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.form-field-check label {
+  margin: 0;
+}
+
 .field-error {
   margin: 0;
   color: #b42318;

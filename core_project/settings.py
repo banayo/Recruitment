@@ -156,5 +156,14 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL", "HR Recruitment <hr@example.com>"
 )
-HR_CALENDAR_EMAIL = os.getenv("HR_CALENDAR_EMAIL", "")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "20"))
+GOOGLE_HR_CALENDAR_ID = os.getenv("GOOGLE_HR_CALENDAR_ID", "")
+GOOGLE_CALENDAR_CREDENTIALS = os.getenv(
+    "GOOGLE_CALENDAR_CREDENTIALS", "recruitment/secrets/credentials.json"
+)
+GOOGLE_CALENDAR_TOKEN = os.getenv(
+    "GOOGLE_CALENDAR_TOKEN", "recruitment/secrets/token.pickle"
+)
+GOOGLE_CALENDAR_COLOR_ID = os.getenv("GOOGLE_CALENDAR_COLOR_ID", "7")
+GOOGLE_CALENDAR_AUTH_PORT = int(os.getenv("GOOGLE_CALENDAR_AUTH_PORT", "8080"))
 
