@@ -21,17 +21,9 @@
       </div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="stack-form">
+    <form method="post" enctype="multipart/form-data" class="stack-form" data-address-lookup="{% url 'recruitment:lookup_thai_address' %}">
       {% csrf_token %}
-      {% for field in form %}
-        <div class="form-field">
-          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.errors %}
-            <p class="field-error">{{ field.errors|striptags }}</p>
-          {% endif %}
-        </div>
-      {% endfor %}
+      {% include "recruitment/hr/_candidate_form_fields.html" with form=form %}
       <div class="cta-group">
         <button type="submit" class="btn btn-primary">บันทึกแล้วสมัครตำแหน่ง</button>
         <a class="btn btn-outline" href="{% url 'recruitment:check_candidate' %}">ยกเลิก</a>
@@ -39,4 +31,5 @@
     </form>
   </div>
 </section>
+{% include "recruitment/hr/_address_zip_script.html" %}
 {% endblock %}

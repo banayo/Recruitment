@@ -1,20 +1,22 @@
 from urllib.parse import urlencode
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.db.models import Count, OuterRef, Q, Subquery
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
+from .address import lookup_zip
 from .auth import can_decide_requisition, can_edit_requisition, can_hr_finalize, can_reject_requisition, can_view_requisition, is_designated_manager, require_hr, user_is_hr
 from .forms import (
+    AcquaintanceFormSet,
     CandidateForm,
     CompanyForm,
     DepartmentForm,
     DivisionForm,
     EmployeeLevelForm,
+    GuarantorFormSet,
     HRMapForm,
     InterviewForm,
     JobApplicationEditForm,
@@ -23,26 +25,19 @@ from .forms import (
     RequisitionCreateForm,
     RequisitionDecideForm,
     RequisitionEditForm,
+    StartWorkForm,
+    StudyFormSet,
     WorkLocationForm,
+    candidate_missing_profile_labels,
 )
 from .line import build_authorize_url, fetch_line_user_id, line_configured, new_state
 from .mail import (
     create_interview_google_calendar,
+    create_start_work_google_calendar,
     interview_end,
     send_candidate_interview_email,
 )
-from .models import (
-    Candidate,
-    Company,
-    Department,
-    Division,
-    EmployeeLevel,
-    JobApplication,
-    JobPosition,
-    Requisition,
-    User,
-    WorkLocation,
-)
+from .models import Candidate, Company, Department, Division, EmployeeLevel, EmployeeRecord, JobApplication, JobPosition, Requisition, User, WorkLocation
 from .services import approve_requisition, map_position_and_sync, reject_requisition
 
 
@@ -952,6 +947,10 @@ def job_application_detail(request, pk):
             "position",
             "position__department",
             "position__department__division",
+            "hired_record",
+            "hired_record__company",
+            "hired_record__location",
+            "hired_record__employee_level",
         ).prefetch_related(
             "candidate__acquaintances",
             "candidate__guarantors",
@@ -1057,6 +1056,73 @@ def schedule_interview(request, application_id):
 
 
 @login_required
+def schedule_start_work(request, application_id):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    application = get_object_or_404(
+        JobApplication.objects.select_related(
+            "candidate", "position", "hired_record"
+        ),
+        pk=application_id,
+    )
+    if application.status not in (
+        JobApplication.Status.INTERVIEWING,
+        JobApplication.Status.OFFERED,
+    ):
+        messages.error(request, "นัดเริ่มงานได้เมื่อสถานะเป็นนัดสัมภาษณ์หรือเสนอจ้างงาน")
+        return redirect("recruitment:job_application_detail", pk=application.pk)
+
+    missing = candidate_missing_profile_labels(application.candidate)
+    if missing:
+        messages.error(
+            request,
+            "กรอกข้อมูลผู้สมัครให้ครบก่อนยืนยันนัดเริ่มงาน: " + ", ".join(missing),
+        )
+        return redirect("recruitment:candidate_edit", pk=application.candidate.pk)
+
+    record = getattr(application, "hired_record", None)
+    if record is None:
+        record = EmployeeRecord.objects.filter(candidate=application.candidate).first()
+    if record is None:
+        record = EmployeeRecord(
+            candidate=application.candidate,
+            employee_code=f"TMP{application.pk:06d}",
+        )
+
+    if request.method == "POST":
+        form = StartWorkForm(
+            request.POST, instance=record, application=application
+        )
+        if form.is_valid():
+            record = form.save(commit=False)
+            record.candidate = application.candidate
+            record.application = application
+            if not record.employee_code:
+                record.employee_code = f"TMP{application.pk:06d}"
+            record.save()
+            application.position = form.cleaned_data["position"]
+            application.start_work_date = record.start_date
+            application.status = JobApplication.Status.OFFERED
+            application.save()
+            notes = ["ยืนยันตำแหน่งและบันทึกนัดเริ่มงานแล้ว"]
+            if form.cleaned_data.get("add_google_calendar"):
+                try:
+                    sent_cal, cal_dest = create_start_work_google_calendar(application)
+                    notes.append(f"Google Calendar: {cal_dest}" if sent_cal else cal_dest)
+                except Exception as exc:
+                    notes.append(f"สร้างนัดใน Google Calendar ไม่สำเร็จ ({exc})")
+            messages.success(request, " · ".join(notes))
+            return redirect("recruitment:job_application_detail", pk=application.pk)
+    else:
+        form = StartWorkForm(instance=record, application=application)
+    return render(
+        request,
+        "recruitment/hr/schedule_start_work.html",
+        {"form": form, "application": application},
+    )
+
+
+@login_required
 def check_candidate(request):
     if not require_hr(request):
         return HttpResponseForbidden("เฉพาะ HR")
@@ -1112,6 +1178,54 @@ def create_application_for_existing(request, candidate_id):
             "candidate": candidate,
             "past_applications": past_applications,
             "form": form,
+        },
+    )
+
+
+@login_required
+def lookup_thai_address(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    matches = lookup_zip(request.GET.get("zip", ""))
+    return JsonResponse({"matches": matches})
+
+
+@login_required
+def candidate_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    candidate = get_object_or_404(Candidate, pk=pk)
+    if request.method == "POST":
+        form = CandidateForm(request.POST, request.FILES, instance=candidate)
+        study_formset = StudyFormSet(request.POST, instance=candidate)
+        guarantor_formset = GuarantorFormSet(request.POST, instance=candidate)
+        acquaintance_formset = AcquaintanceFormSet(request.POST, instance=candidate)
+        if (
+            form.is_valid()
+            and study_formset.is_valid()
+            and guarantor_formset.is_valid()
+            and acquaintance_formset.is_valid()
+        ):
+            form.save()
+            study_formset.save()
+            guarantor_formset.save()
+            acquaintance_formset.save()
+            messages.success(request, f"บันทึกข้อมูล {candidate} แล้ว")
+            return redirect("recruitment:list_candidate")
+    else:
+        form = CandidateForm(instance=candidate)
+        study_formset = StudyFormSet(instance=candidate)
+        guarantor_formset = GuarantorFormSet(instance=candidate)
+        acquaintance_formset = AcquaintanceFormSet(instance=candidate)
+    return render(
+        request,
+        "recruitment/hr/candidate_edit.html",
+        {
+            "form": form,
+            "candidate": candidate,
+            "study_formset": study_formset,
+            "guarantor_formset": guarantor_formset,
+            "acquaintance_formset": acquaintance_formset,
         },
     )
 

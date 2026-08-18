@@ -74,6 +74,9 @@
                       <a class="btn btn-primary btn-sm" href="{% url 'recruitment:schedule_interview' item.pk %}">นัดสัมภาษณ์</a>
                     {% elif item.status == "interviewing" %}
                       <a class="btn btn-outline btn-sm" href="{% url 'recruitment:schedule_interview' item.pk %}">แก้ไขนัด</a>
+                      <a class="btn btn-primary btn-sm" href="{% url 'recruitment:schedule_start_work' item.pk %}">นัดเริ่มงาน</a>
+                    {% elif item.status == "offered" %}
+                      <a class="btn btn-outline btn-sm" href="{% url 'recruitment:schedule_start_work' item.pk %}">แก้ไขนัดเริ่มงาน</a>
                     {% endif %}
                     <a class="btn btn-outline btn-sm" href="{% url 'recruitment:job_application_detail' item.pk %}">ดูรายละเอียด</a>
                   </div>

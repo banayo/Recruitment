@@ -589,6 +589,15 @@ a:hover {
   gap: 18px;
 }
 
+.formset-row {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--color-steel);
+  border-radius: var(--rounded-md);
+  background: var(--color-fog);
+}
+
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
@@ -654,8 +663,8 @@ a:hover {
   flex: 0 0 auto;
 }
 
-.form-field-check label {
-  margin: 0;
+.form-field input[readonly] {
+  background: var(--color-fog);
 }
 
 .field-error {

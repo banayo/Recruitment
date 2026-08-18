@@ -20,6 +20,9 @@
           <a class="btn btn-outline" href="{% url 'recruitment:schedule_interview' application.pk %}">นัดสัมภาษณ์</a>
         {% elif application.status == "interviewing" %}
           <a class="btn btn-outline" href="{% url 'recruitment:schedule_interview' application.pk %}">แก้ไขนัดสัมภาษณ์</a>
+          <a class="btn btn-outline" href="{% url 'recruitment:schedule_start_work' application.pk %}">นัดเริ่มงาน</a>
+        {% elif application.status == "offered" %}
+          <a class="btn btn-outline" href="{% url 'recruitment:schedule_start_work' application.pk %}">แก้ไขนัดเริ่มงาน</a>
         {% endif %}
         <a class="btn btn-outline" href="{% url 'recruitment:list_job_application' %}">กลับรายการ</a>
       </div>
@@ -160,6 +163,38 @@
         </dl>
       {% else %}
         <p class="empty-state">ยังไม่ได้นัดสัมภาษณ์</p>
+      {% endif %}
+    </article>
+
+    <article class="surface-card" style="margin-bottom: 20px;">
+      <h2 class="surface-card-title">นัดเริ่มงาน</h2>
+      {% if application.start_work_date %}
+        <dl class="detail-grid">
+          <div>
+            <dt>วันที่เริ่มงาน</dt>
+            <dd>{{ application.start_work_date|date:"d/m/Y" }}</dd>
+          </div>
+          <div>
+            <dt>ตำแหน่งที่ยืนยัน</dt>
+            <dd>{{ application.position.title }}</dd>
+          </div>
+          {% if application.hired_record %}
+            <div>
+              <dt>บริษัท</dt>
+              <dd>{{ application.hired_record.company|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt>สถานที่ทำงาน</dt>
+              <dd>{{ application.hired_record.location|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt>ระดับพนักงาน</dt>
+              <dd>{{ application.hired_record.employee_level|default:"—" }}</dd>
+            </div>
+          {% endif %}
+        </dl>
+      {% else %}
+        <p class="empty-state">ยังไม่ได้นัดเริ่มงาน</p>
       {% endif %}
     </article>
 

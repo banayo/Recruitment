@@ -59,7 +59,6 @@ def send_candidate_interview_email(application):
         "candidate": application.candidate,
         "position_title": application.position.title,
         "start_display": _fmt_dt(start),
-        "end_display": _fmt_dt(interview_end(start)),
     }
     mail = EmailMultiAlternatives(
         subject=f"นัดหมายการสัมภาษณ์งาน ตำแหน่ง {ctx['position_title']}",
@@ -207,3 +206,56 @@ def create_interview_google_calendar(application):
         .execute()
     )
     return True, created.get("htmlLink") or ", ".join(guests) or calendar_id
+
+
+def create_start_work_google_calendar(application):
+    from datetime import datetime, time
+
+    from googleapiclient.discovery import build
+
+    calendar_id = (getattr(settings, "GOOGLE_HR_CALENDAR_ID", "") or "").strip()
+    if not calendar_id:
+        return False, "ยังไม่ได้ตั้ง GOOGLE_HR_CALENDAR_ID"
+    if not application.start_work_date:
+        return False, "ยังไม่มีวันที่นัดเริ่มงาน"
+
+    tzname = settings.TIME_ZONE
+    start = timezone.make_aware(
+        datetime.combine(application.start_work_date, time(hour=9, minute=0)),
+        timezone.get_current_timezone(),
+    )
+    end = start + timedelta(hours=1)
+    candidate = application.candidate
+    attendees = []
+    email = (candidate.email or "").strip()
+    if email:
+        attendees.append({"email": email})
+    event = {
+        "summary": f"เริ่มงาน {candidate} — {application.position.title}",
+        "description": (
+            f"ผู้สมัคร: {candidate}\n"
+            f"โทร: {candidate.phone_number}\n"
+            f"ตำแหน่ง: {application.position.title}\n"
+            f"วันที่เริ่มงาน: {application.start_work_date.strftime('%d/%m/%Y')}"
+        ),
+        "location": "สำนักงาน",
+        "start": {
+            "dateTime": timezone.localtime(start).strftime("%Y-%m-%dT%H:%M:%S"),
+            "timeZone": tzname,
+        },
+        "end": {
+            "dateTime": timezone.localtime(end).strftime("%Y-%m-%dT%H:%M:%S"),
+            "timeZone": tzname,
+        },
+        "attendees": attendees,
+    }
+    color = (getattr(settings, "GOOGLE_CALENDAR_COLOR_ID", "") or "").strip()
+    if color:
+        event["colorId"] = color
+    created = (
+        build("calendar", "v3", credentials=google_calendar_credentials())
+        .events()
+        .insert(calendarId=calendar_id, body=event, sendUpdates="all")
+        .execute()
+    )
+    return True, created.get("htmlLink") or calendar_id

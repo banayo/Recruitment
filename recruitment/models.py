@@ -328,6 +328,9 @@ class JobApplication(models.Model):
     meeting_link = models.URLField(
         max_length=500, null=True, blank=True, verbose_name="ลิงก์ประชุม"
     )
+    start_work_date = models.DateField(
+        null=True, blank=True, verbose_name="วันที่นัดเริ่มงาน"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

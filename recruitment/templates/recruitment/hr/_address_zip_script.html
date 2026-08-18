@@ -1,0 +1,125 @@
+<script>
+  (function () {
+    const form = document.querySelector("[data-address-lookup]");
+    if (!form) return;
+    const lookupUrl = form.getAttribute("data-address-lookup");
+    const sameBox = form.querySelector("#id_same_as_id_address, #id_candidate-same_as_id_address");
+
+    function field(group, cls) {
+      return form.querySelector("." + cls + '[data-group="' + group + '"]');
+    }
+
+    function setPresentLocked(locked) {
+      ["js-house", "js-zip", "js-tambon"].forEach(function (cls) {
+        const el = field("present", cls);
+        if (el) el.readOnly = locked && cls !== "js-tambon";
+        if (el && cls === "js-tambon") el.disabled = locked;
+      });
+    }
+
+    function copyTambonOptions() {
+      const from = field("id", "js-tambon");
+      const to = field("present", "js-tambon");
+      if (!from || !to) return;
+      to.innerHTML = from.innerHTML;
+      to.value = from.value;
+    }
+
+    function copyIdToPresent() {
+      if (!sameBox || !sameBox.checked) return;
+      const houseFrom = field("id", "js-house");
+      const houseTo = field("present", "js-house");
+      const zipFrom = field("id", "js-zip");
+      const zipTo = field("present", "js-zip");
+      if (houseFrom && houseTo) houseTo.value = houseFrom.value;
+      if (zipFrom && zipTo) zipTo.value = zipFrom.value;
+      copyTambonOptions();
+      const amphureFrom = field("id", "js-amphure");
+      const amphureTo = field("present", "js-amphure");
+      const provinceFrom = field("id", "js-province");
+      const provinceTo = field("present", "js-province");
+      if (amphureFrom && amphureTo) amphureTo.value = amphureFrom.value;
+      if (provinceFrom && provinceTo) provinceTo.value = provinceFrom.value;
+      setPresentLocked(true);
+    }
+
+    function unlockPresent() {
+      setPresentLocked(false);
+    }
+
+    function fillGroup(group, matches, selectedTambon) {
+      const tambon = field(group, "js-tambon");
+      if (!tambon) return;
+      const current = selectedTambon || tambon.value;
+      tambon.innerHTML = "";
+      const blank = document.createElement("option");
+      blank.value = "";
+      blank.textContent = matches.length ? "เลือกแขวง/ตำบล" : "ไม่พบรหัสไปรษณีย์";
+      tambon.appendChild(blank);
+      matches.forEach(function (item) {
+        const opt = document.createElement("option");
+        opt.value = item.tambon;
+        opt.textContent = item.tambon;
+        opt.dataset.amphure = item.amphure;
+        opt.dataset.province = item.province;
+        if (item.tambon === current) opt.selected = true;
+        tambon.appendChild(opt);
+      });
+      if (matches.length === 1) {
+        tambon.value = matches[0].tambon;
+      }
+      applyTambon(group);
+      if (group === "id") copyIdToPresent();
+    }
+
+    function applyTambon(group) {
+      const tambon = field(group, "js-tambon");
+      const amphure = field(group, "js-amphure");
+      const province = field(group, "js-province");
+      const selected = tambon && tambon.options[tambon.selectedIndex];
+      if (amphure) amphure.value = selected && selected.dataset.amphure ? selected.dataset.amphure : "";
+      if (province) province.value = selected && selected.dataset.province ? selected.dataset.province : "";
+      if (group === "id") copyIdToPresent();
+    }
+
+    function lookup(group, zipInput) {
+      const zip = (zipInput.value || "").trim();
+      if (zip.length !== 5) {
+        fillGroup(group, []);
+        return;
+      }
+      fetch(lookupUrl + "?zip=" + encodeURIComponent(zip), { credentials: "same-origin" })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          fillGroup(group, data.matches || []);
+        });
+    }
+
+    form.querySelectorAll(".js-zip").forEach(function (input) {
+      input.addEventListener("input", function () {
+        if (sameBox && sameBox.checked && input.getAttribute("data-group") === "present") return;
+        lookup(input.getAttribute("data-group"), input);
+        if (input.getAttribute("data-group") === "id") copyIdToPresent();
+      });
+      if ((input.value || "").trim().length === 5) {
+        lookup(input.getAttribute("data-group"), input);
+      }
+    });
+    form.querySelectorAll(".js-tambon").forEach(function (select) {
+      select.addEventListener("change", function () {
+        applyTambon(select.getAttribute("data-group"));
+      });
+    });
+    const idHouse = field("id", "js-house");
+    if (idHouse) {
+      idHouse.addEventListener("input", copyIdToPresent);
+    }
+    if (sameBox) {
+      sameBox.addEventListener("change", function () {
+        if (sameBox.checked) copyIdToPresent();
+        else unlockPresent();
+      });
+      if (sameBox.checked) copyIdToPresent();
+    }
+  })();
+</script>

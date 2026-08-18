@@ -13,19 +13,11 @@
       </div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="stack-form">
+    <form method="post" enctype="multipart/form-data" class="stack-form" data-address-lookup="{% url 'recruitment:lookup_thai_address' %}">
       {% csrf_token %}
 
       <h2 class="surface-card-title">ข้อมูลผู้สมัคร</h2>
-      {% for field in candidate_form %}
-        <div class="form-field">
-          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.errors %}
-            <p class="field-error">{{ field.errors|striptags }}</p>
-          {% endif %}
-        </div>
-      {% endfor %}
+      {% include "recruitment/hr/_candidate_form_fields.html" with form=candidate_form %}
 
       <h2 class="surface-card-title">ข้อมูลใบสมัคร</h2>
       {% for field in application_form %}
@@ -45,4 +37,5 @@
     </form>
   </div>
 </section>
+{% include "recruitment/hr/_address_zip_script.html" %}
 {% endblock %}

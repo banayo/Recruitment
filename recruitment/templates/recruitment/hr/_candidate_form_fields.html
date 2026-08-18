@@ -1,0 +1,30 @@
+{% for field in form %}
+  {% if field.name == "title_name" %}
+    <h2 class="surface-card-title">ชื่อภาษาอังกฤษ</h2>
+  {% elif field.name == "address" %}
+    <h2 class="surface-card-title">ที่อยู่ตามบัตรประชาชน</h2>
+    <p class="page-copy">กรอกบ้านเลขที่ แล้วใส่รหัสไปรษณีย์ — แขวง เขต จังหวัดจะขึ้นเอง</p>
+  {% elif field.name == "same_as_id_address" %}
+    <h2 class="surface-card-title">ที่อยู่ปัจจุบัน</h2>
+  {% endif %}
+  {% if field.field.widget.input_type == "checkbox" %}
+    <div class="form-field form-field-check">
+      {{ field }}
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {% if field.errors %}
+        <p class="field-error">{{ field.errors|striptags }}</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="form-field{% if field.name == 'address_present' or field.name == 'zip_present' or field.name == 'tambon_present' or field.name == 'amphure_present' or field.name == 'province_present' %} js-present-address{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}
+        <p class="page-copy">{{ field.help_text }}</p>
+      {% endif %}
+      {% if field.errors %}
+        <p class="field-error">{{ field.errors|striptags }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endfor %}

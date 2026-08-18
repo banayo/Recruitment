@@ -1,0 +1,25 @@
+{{ formset.management_form }}
+{% if formset.non_form_errors %}
+  <p class="field-error">{{ formset.non_form_errors|striptags }}</p>
+{% endif %}
+{% for inline_form in formset %}
+  <div class="formset-row">
+    {% for hidden in inline_form.hidden_fields %}{{ hidden }}{% endfor %}
+    {% for field in inline_form.visible_fields %}
+      {% if field.name == "DELETE" %}
+        <div class="form-field form-field-check">
+          {{ field }}
+          <label for="{{ field.id_for_label }}">ลบรายการนี้</label>
+        </div>
+      {% else %}
+        <div class="form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="field-error">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endfor %}

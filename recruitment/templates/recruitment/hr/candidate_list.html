@@ -70,7 +70,10 @@
                 <td>{{ item.application_count }}</td>
                 <td>{{ item.created_at|date:"d/m/Y H:i" }}</td>
                 <td>
-                  <a class="btn btn-outline btn-sm" href="{% url 'recruitment:create_application_for_existing' item.pk %}">สมัครตำแหน่ง</a>
+                  <div class="cta-group">
+                    <a class="btn btn-outline btn-sm" href="{% url 'recruitment:candidate_edit' item.pk %}">แก้ไข</a>
+                    <a class="btn btn-outline btn-sm" href="{% url 'recruitment:create_application_for_existing' item.pk %}">สมัครตำแหน่ง</a>
+                  </div>
                 </td>
               </tr>
             {% endfor %}

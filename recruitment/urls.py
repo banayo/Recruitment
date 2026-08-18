@@ -62,6 +62,12 @@ urlpatterns = [
         name="employee_level_edit",
     ),
     path("candidates/", views.list_candidate, name="list_candidate"),
+    path(
+        "candidates/address-lookup/",
+        views.lookup_thai_address,
+        name="lookup_thai_address",
+    ),
+    path("candidates/<int:pk>/edit/", views.candidate_edit, name="candidate_edit"),
     path("applications/", views.list_job_application, name="list_job_application"),
     path(
         "applications/<int:pk>/edit/",
@@ -77,6 +83,11 @@ urlpatterns = [
         "applications/<int:application_id>/schedule/",
         views.schedule_interview,
         name="schedule_interview",
+    ),
+    path(
+        "applications/<int:application_id>/start-work/",
+        views.schedule_start_work,
+        name="schedule_start_work",
     ),
     path("candidates/check/", views.check_candidate, name="check_candidate"),
     path(

@@ -1,0 +1,59 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}นัดเริ่มงาน — {{ application.candidate }}{% endblock %}
+{% block nav_applications %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container narrow">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">{% if application.start_work_date %}แก้ไขนัดเริ่มงาน{% else %}นัดเริ่มงาน{% endif %}</h1>
+        <p class="page-copy">ยืนยันตำแหน่ง แล้วกรอกวันที่เริ่มงาน บริษัท สถานที่ทำงาน และระดับพนักงาน</p>
+      </div>
+    </div>
+
+    <article class="surface-card" style="margin-bottom: 20px;">
+      <h2 class="surface-card-title">สรุปผู้สมัคร</h2>
+      <dl class="detail-grid">
+        <div>
+          <dt>ชื่อ</dt>
+          <dd>{{ application.candidate }}</dd>
+        </div>
+        <div>
+          <dt>เบอร์โทรศัพท์</dt>
+          <dd>{{ application.candidate.phone_number }}</dd>
+        </div>
+        <div>
+          <dt>ตำแหน่ง</dt>
+          <dd>{{ application.position.title }}</dd>
+        </div>
+      </dl>
+    </article>
+
+    <form method="post" class="stack-form">
+      {% csrf_token %}
+      {% for field in form %}
+        {% if field.field.widget.input_type == "checkbox" %}
+          <div class="form-field form-field-check">
+            {{ field }}
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          </div>
+        {% else %}
+          <div class="form-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+              <p class="field-error">{{ field.errors|striptags }}</p>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      <div class="cta-group">
+        <button type="submit" class="btn btn-primary">ยืนยันนัดเริ่มงาน</button>
+        <a class="btn btn-outline" href="{% url 'recruitment:job_application_detail' application.pk %}">ยกเลิก</a>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

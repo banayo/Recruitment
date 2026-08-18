@@ -3,7 +3,6 @@
 ฝ่ายบุคคลขอนัดหมายสัมภาษณ์งานตำแหน่ง {{ position_title }}
 
 วันเวลาเริ่ม: {{ start_display }}
-วันเวลาสิ้นสุด: {{ end_display }}
 ผู้สัมภาษณ์: {{ application.interviewer_names }}
 {% if application.is_online %}
 รูปแบบ: สัมภาษณ์ออนไลน์
