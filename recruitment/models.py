@@ -274,9 +274,10 @@ class JobApplication(models.Model):
         APPLIED = "applied", "สมัครใหม่"
         INTERVIEWING = "interviewing", "นัดสัมภาษณ์"
         NOT_SELECTED = "not_selected", "สัมภาษณ์ไม่ผ่าน"
-        OFFERED = "offered", "เสนอจ้างงาน"
-        HIRED = "hired", "รับเข้าทำงาน"
-        REJECTED = "rejected", "ไม่มาทำงาน"
+        START_WORK = "start_work", "นัดเริ่มงาน"
+        NOT_COME_WORK = "not_come_work", "ไม่มาทำงาน"
+        WORKING = "working", "ทำงานอยู่"
+        RESIGNED = "resigned", "ลาออก"
         CANCELLED = "cancelled", "ยกเลิก"
 
     candidate = models.ForeignKey(
@@ -347,9 +348,25 @@ class JobApplication(models.Model):
         return f"{self.candidate} -> สมัครตำแหน่ง: {self.position}"
 
 
+class ContractType(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="ประเภทสัญญา")
+    is_active = models.BooleanField(default=True, verbose_name="เปิดใช้งาน")
+
+    class Meta:
+        verbose_name = "ประเภทสัญญา"
+        verbose_name_plural = "ประเภทสัญญา (Master Data)"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class EmployeeRecord(models.Model):
     employee_code = models.CharField(
         max_length=20, unique=True, verbose_name="รหัสพนักงาน"
+    )
+    document_code = models.CharField(
+        max_length=20, unique=True, verbose_name="รหัสเอกสาร"
     )
     candidate = models.OneToOneField(
         Candidate,
@@ -383,6 +400,13 @@ class EmployeeRecord(models.Model):
         blank=True,
         verbose_name="ระดับพนักงาน",
     )
+    contract_type = models.ForeignKey(
+        ContractType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="ประเภทสัญญา",
+    )
     is_active = models.BooleanField(default=False, verbose_name="สถานะยังทำงานอยู่")
     resign_date = models.DateField(null=True, blank=True, verbose_name="วันที่ลาออก")
     resign_note = models.TextField(null=True, blank=True, verbose_name="หมายเหตุลาออก")
@@ -397,6 +421,38 @@ class EmployeeRecord(models.Model):
 
     def __str__(self):
         return self.employee_code
+
+
+class ContractTemplate(models.Model):
+    contract_type = models.ForeignKey(
+        ContractType,
+        on_delete=models.PROTECT,
+        related_name="templates",
+        verbose_name="ประเภทสัญญา",
+    )
+    name = models.CharField(max_length=200, verbose_name="ชื่อเอกสาร")
+    file = models.FileField(
+        upload_to="contract_templates/",
+        verbose_name="ไฟล์แม่แบบ (.docx)",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="เปิดใช้งาน")
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="อัปโหลดโดย",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "แม่แบบสัญญา"
+        verbose_name_plural = "แม่แบบสัญญา"
+        ordering = ["contract_type", "name"]
+
+    def __str__(self):
+        return f"{self.contract_type} — {self.name}"
 
 
 RELATION_CHOICES = [

@@ -4,19 +4,16 @@
 {% block nav_home %}is-active{% endblock %}
 
 {% block content %}
-<section class="hero hero-app" aria-labelledby="welcome-title">
-  <div class="hero-chevrons" aria-hidden="true">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
+<div class="page">
   <div class="container">
-    <div class="hero-inner">
-      <p class="hero-brand">ระบบสรรหาบุคลากร</p>
-      <h1 class="hero-title" id="welcome-title">
+    
+    <!-- Hero / Welcome Section (Glass Card) -->
+    <div class="glass-card" style="margin-bottom: 32px;">
+      <p class="page-copy" style="margin-bottom: 8px; font-weight: 500; color: var(--color-primary);">ระบบสรรหาบุคลากร</p>
+      <h1 class="page-title" id="welcome-title">
         สวัสดี{% if user.first_name %} {{ user.first_name }}{% elif user.nickname %} {{ user.nickname }}{% endif %}
       </h1>
-      <p class="hero-copy">
+      <p class="page-copy" style="margin-bottom: 32px; max-width: 600px;">
         {% if user.division or user.department %}
           {{ user.division }}{% if user.division and user.department %} · {% endif %}{{ user.department }}
         {% else %}
@@ -28,44 +25,48 @@
         <a class="btn btn-outline" href="{% url 'recruitment:my_positions' %}">ตำแหน่งในแผนก</a>
       </div>
     </div>
-  </div>
-</section>
 
+    <!-- Workflow Section -->
+    <div class="glass-card">
+      <div class="section-head">
+        <div>
+          <h2 class="surface-card-title" id="workflow-title">ขั้นตอนการสรรหา</h2>
+          <p class="page-copy" style="margin-top: 8px;">ผู้ขอสร้างใบ → หัวหน้าอนุมัติ → ฝ่ายบุคคลอนุมัติและผูกตำแหน่ง</p>
+        </div>
+      </div>
+      
+      <ol class="flow-list">
+        <li>
+          <span class="step">01</span>
+          <div>
+            <h3>ผู้ขอ · สร้างคำขอ</h3>
+            <p>ระบุชื่อตำแหน่ง จำนวน และรายละเอียดงาน</p>
+          </div>
+        </li>
+        <li>
+          <span class="step">02</span>
+          <div>
+            <h3>หัวหน้า · อนุมัติ</h3>
+            <p>ตรวจสอบและอนุมัติคำขอในระบบ</p>
+          </div>
+        </li>
+        <li>
+          <span class="step">03</span>
+          <div>
+            <h3>HR · อนุมัติแทนหัวหน้า</h3>
+            <p>ในกรณีที่จำเป็น ฝ่ายบุคคลสามารถอนุมัติแทนได้</p>
+          </div>
+        </li>
+        <li>
+          <span class="step">04</span>
+          <div>
+            <h3>ฝ่ายบุคคล · อนุมัติ</h3>
+            <p>ผูกตำแหน่ง master และดำเนินการสรรหาต่อไป</p>
+          </div>
+        </li>
+      </ol>
+    </div>
 
-<section class="band" aria-labelledby="workflow-title">
-  <div class="container">
-    <h2 class="section-title" id="workflow-title">ขั้นตอนสั้น ๆ</h2>
-    <p class="section-copy">ผู้ขอสร้างใบ → หัวหน้าอนุมัติ → ฝ่ายบุคคลอนุมัติและผูกตำแหน่ง</p>
-    <ol class="flow-list">
-      <li>
-        <span class="step">01</span>
-        <div>
-          <h3>ผู้ขอ · สร้างคำขอ</h3>
-          <p>ระบุชื่อตำแหน่ง จำนวน และละเอียดงาน</p>
-        </div>
-      </li>
-      <li>
-        <span class="step">02</span>
-        <div>
-          <h3>หัวหน้า · อนุมัติ</h3>
-          <p>สถานะเป็นหัวหน้าอนุมัติแล้ว</p>
-        </div>
-      </li>
-      <li>
-        <span class="step">03</span>
-        <div>
-          <h3>HR · อนุมัติแทนหัวหน้า</h3>
-          <p>ถ้าจำเป็น อนุมัติขั้นหัวหน้าแทนได้</p>
-        </div>
-      </li>
-      <li>
-        <span class="step">04</span>
-        <div>
-          <h3>ฝ่ายบุคคล · อนุมัติ</h3>
-          <p>ผูกตำแหน่ง master แล้วสถานะเป็นฝ่ายบุคคลอนุมัติแล้ว</p>
-        </div>
-      </li>
-    </ol>
   </div>
-</section>
+</div>
 {% endblock %}

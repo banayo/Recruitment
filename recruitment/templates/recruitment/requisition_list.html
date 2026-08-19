@@ -4,84 +4,86 @@
 {% block nav_requisitions %}is-active{% endblock %}
 
 {% block content %}
-<section class="page">
+<div class="page">
   <div class="container">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">คำขออัตรากำลัง</h1>
-        <p class="page-copy">
-          {% if is_hr_user %}
-            มุมมอง HR — คำขออัตรากำลังทั้งหมดในระบบ
-          {% else %}
-            มุมมองผู้ใช้ — เฉพาะคำขอที่คุณสร้าง
-          {% endif %}
-        </p>
+    <div class="glass-card">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">คำขออัตรากำลัง</h1>
+          <p class="page-copy">
+            {% if is_hr_user %}
+              มุมมอง HR — คำขออัตรากำลังทั้งหมดในระบบ
+            {% else %}
+              มุมมองผู้ใช้ — เฉพาะคำขอที่คุณสร้าง
+            {% endif %}
+          </p>
+        </div>
+        <a class="btn btn-primary" href="{% url 'recruitment:requisition_create' %}">สร้างคำขอ</a>
       </div>
-      <a class="btn btn-primary" href="{% url 'recruitment:requisition_create' %}">สร้างคำขอ</a>
-    </div>
 
-    <form method="get" class="filter-bar">
-      <input
-        class="text-input"
-        type="search"
-        name="q"
-        value="{{ filter_q }}"
-        placeholder="ค้นหาชื่อตำแหน่ง / ผู้ขอ / รหัส"
-      >
-      <select class="text-input" name="status">
-        <option value="">ทุกสถานะ</option>
-        {% for value, label in status_choices %}
-          <option value="{{ value }}" {% if filter_status == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      <select class="text-input" name="priority">
-        <option value="">ทุกระดับความเร่งด่วน</option>
-        {% for value, label in priority_choices %}
-          <option value="{{ value }}" {% if filter_priority == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit" class="btn btn-primary">กรอง</button>
-      {% if filter_q or filter_status or filter_priority %}
-        <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">ล้าง</a>
-      {% endif %}
-    </form>
+      <form method="get" class="filter-bar">
+        <input
+          class="text-input"
+          type="search"
+          name="q"
+          value="{{ filter_q }}"
+          placeholder="ค้นหาชื่อตำแหน่ง / ผู้ขอ / รหัส"
+        >
+        <select class="text-input" name="status">
+          <option value="">ทุกสถานะ</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filter_status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select class="text-input" name="priority">
+          <option value="">ทุกระดับความเร่งด่วน</option>
+          {% for value, label in priority_choices %}
+            <option value="{{ value }}" {% if filter_priority == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">กรอง</button>
+        {% if filter_q or filter_status or filter_priority %}
+          <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">ล้าง</a>
+        {% endif %}
+      </form>
 
-    {% if requisitions %}
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>ผู้ขอ</th>
-              <th>ชื่อตำแหน่ง</th>
-              <th>ผู้อนุมัติ</th>
-              <th>จำนวนขอ/อนุมัติ</th>
-              <th>สถานะ</th>
-              <th>วันที่สร้าง</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in requisitions %}
+      {% if requisitions %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
               <tr>
-                <td>{{ item.requester.first_name }} {{ item.requester.last_name }}</td>
-                <td>{{ item.position_title|default:"—" }}</td>
-                <td>{{ item.approver_unid }}</td>
-                <td>{{ item.required_headcount }}{% if item.approved_headcount %} / {{ item.approved_headcount }}{% endif %}</td>
-                <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
-                <td>{{ item.created_at|date:"d/m/Y H:i" }}</td>
-                <td><a class="btn btn-outline btn-sm" href="{% url 'recruitment:requisition_detail' item.pk %}">เปิดดู</a></td>
+                <th>ผู้ขอ</th>
+                <th>ชื่อตำแหน่ง</th>
+                <th>ผู้อนุมัติ</th>
+                <th>จำนวนขอ/อนุมัติ</th>
+                <th>สถานะ</th>
+                <th>วันที่สร้าง</th>
+                <th></th>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      {% if filter_q or filter_status or filter_priority %}
-        <p class="empty-state">ไม่พบคำขอที่ตรงกับตัวกรอง — <a href="{% url 'recruitment:requisition_list' %}">ล้างตัวกรอง</a></p>
+            </thead>
+            <tbody>
+              {% for item in requisitions %}
+                <tr>
+                  <td>{{ item.requester.first_name }} {{ item.requester.last_name }}</td>
+                  <td>{{ item.position_title|default:"—" }}</td>
+                  <td>{{ item.approver_unid }}</td>
+                  <td>{{ item.required_headcount }}{% if item.approved_headcount %} / {{ item.approved_headcount }}{% endif %}</td>
+                  <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
+                  <td>{{ item.created_at|date:"d/m/Y H:i" }}</td>
+                  <td><a class="btn btn-outline btn-sm" href="{% url 'recruitment:requisition_detail' item.pk %}">เปิดดู</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       {% else %}
-        <p class="empty-state">ยังไม่มีคำขอ — <a href="{% url 'recruitment:requisition_create' %}">สร้างคำขอแรก</a></p>
+        {% if filter_q or filter_status or filter_priority %}
+          <p class="empty-state" style="margin-top: 24px; color: var(--color-charcoal);">ไม่พบคำขอที่ตรงกับตัวกรอง — <a href="{% url 'recruitment:requisition_list' %}">ล้างตัวกรอง</a></p>
+        {% else %}
+          <p class="empty-state" style="margin-top: 24px; color: var(--color-charcoal);">ยังไม่มีคำขอ — <a href="{% url 'recruitment:requisition_create' %}">สร้างคำขอแรก</a></p>
+        {% endif %}
       {% endif %}
-    {% endif %}
+    </div>
   </div>
-</section>
+</div>
 {% endblock %}

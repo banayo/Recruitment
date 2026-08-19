@@ -7,6 +7,8 @@
 {% block nav_companies %}{% if active_nav == "companies" %}is-active{% endif %}{% endblock %}
 {% block nav_locations %}{% if active_nav == "locations" %}is-active{% endif %}{% endblock %}
 {% block nav_levels %}{% if active_nav == "levels" %}is-active{% endif %}{% endblock %}
+{% block nav_contract_types %}{% if active_nav == "contract_types" %}is-active{% endif %}{% endblock %}
+{% block nav_contracts %}{% if active_nav == "contracts" %}is-active{% endif %}{% endblock %}
 
 {% block content %}
 <section class="page">
@@ -18,7 +20,7 @@
       </div>
     </div>
 
-    <form method="post" class="stack-form">
+    <form method="post" class="stack-form"{% if form_enctype %} enctype="{{ form_enctype }}"{% endif %}>
       {% csrf_token %}
       {% for field in form %}
         <div class="form-field">

@@ -7,6 +7,8 @@ from .models import (
     Company,
     Department,
     Division,
+    ContractTemplate,
+    ContractType,
     EmployeeLevel,
     EmployeeRecord,
     Guarantor,
@@ -135,6 +137,12 @@ class EmployeeLevelAdmin(admin.ModelAdmin):
     list_filter = ("is_active",)
 
 
+@admin.register(ContractType)
+class ContractTypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active")
+    list_filter = ("is_active",)
+
+
 @admin.register(Candidate)
 class CandidateAdmin(admin.ModelAdmin):
     list_display = ("first_name_th", "last_name_th", "phone_number", "idcard", "created_at")
@@ -151,9 +159,16 @@ class JobApplicationAdmin(admin.ModelAdmin):
 
 @admin.register(EmployeeRecord)
 class EmployeeRecordAdmin(admin.ModelAdmin):
-    list_display = ("employee_code", "candidate", "start_date", "is_active")
-    list_filter = ("is_active", "company")
+    list_display = ("employee_code", "candidate", "start_date", "contract_type", "is_active")
+    list_filter = ("is_active", "company", "contract_type")
     search_fields = ("employee_code", "candidate__first_name_th")
+
+
+@admin.register(ContractTemplate)
+class ContractTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "contract_type", "is_active", "uploaded_by", "updated_at")
+    list_filter = ("contract_type", "is_active")
+    search_fields = ("name",)
 
 
 admin.site.register(Acquaintance)

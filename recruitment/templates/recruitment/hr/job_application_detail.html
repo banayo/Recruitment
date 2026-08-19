@@ -21,8 +21,11 @@
         {% elif application.status == "interviewing" %}
           <a class="btn btn-outline" href="{% url 'recruitment:schedule_interview' application.pk %}">แก้ไขนัดสัมภาษณ์</a>
           <a class="btn btn-outline" href="{% url 'recruitment:schedule_start_work' application.pk %}">นัดเริ่มงาน</a>
-        {% elif application.status == "offered" %}
+        {% elif application.status == "start_work" %}
           <a class="btn btn-outline" href="{% url 'recruitment:schedule_start_work' application.pk %}">แก้ไขนัดเริ่มงาน</a>
+          {% if application.hired_record %}
+            <a class="btn btn-outline" href="{% url 'recruitment:download_application_contract' application.pk %}">ออกหนังสือ</a>
+          {% endif %}
         {% endif %}
         <a class="btn btn-outline" href="{% url 'recruitment:list_job_application' %}">กลับรายการ</a>
       </div>
@@ -190,6 +193,10 @@
             <div>
               <dt>ระดับพนักงาน</dt>
               <dd>{{ application.hired_record.employee_level|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt>ประเภทสัญญา</dt>
+              <dd>{{ application.hired_record.contract_type|default:"—" }}</dd>
             </div>
           {% endif %}
         </dl>

@@ -4,73 +4,75 @@
 {% block nav_approvals %}is-active{% endblock %}
 
 {% block content %}
-<section class="page">
+<div class="page">
   <div class="container">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">คิวรออนุมัติ</h1>
-        <p class="page-copy">
-          {% if is_hr_user and approval_scope == "all" %}
-            มุมมอง HR — คำขอรออนุมัติทั้งหมด (อนุมัติแทนหัวหน้าได้)
-          {% else %}
-            มุมมองหัวหน้า — ใบที่มอบหมายให้คุณ ({{ user.person_unid }})
-          {% endif %}
-        </p>
-      </div>
-      {% if is_hr_user %}
-        <div class="cta-group">
-          <a
-            class="btn {% if approval_scope == 'mine' %}btn-primary{% else %}btn-outline{% endif %}"
-            href="{% url 'recruitment:approval_inbox' %}?scope=mine"
-          >คิวของฉัน</a>
-          <a
-            class="btn {% if approval_scope == 'all' %}btn-primary{% else %}btn-outline{% endif %}"
-            href="{% url 'recruitment:approval_inbox' %}?scope=all"
-          >ทั้งหมด (HR)</a>
+    <div class="glass-card">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">คิวรออนุมัติ</h1>
+          <p class="page-copy">
+            {% if is_hr_user and approval_scope == "all" %}
+              มุมมอง HR — คำขอรออนุมัติทั้งหมด (อนุมัติแทนหัวหน้าได้)
+            {% else %}
+              มุมมองหัวหน้า — ใบที่มอบหมายให้คุณ ({{ user.person_unid }})
+            {% endif %}
+          </p>
         </div>
+        {% if is_hr_user %}
+          <div class="cta-group">
+            <a
+              class="btn {% if approval_scope == 'mine' %}btn-primary{% else %}btn-outline{% endif %}"
+              href="{% url 'recruitment:approval_inbox' %}?scope=mine"
+            >คิวของฉัน</a>
+            <a
+              class="btn {% if approval_scope == 'all' %}btn-primary{% else %}btn-outline{% endif %}"
+              href="{% url 'recruitment:approval_inbox' %}?scope=all"
+            >ทั้งหมด (HR)</a>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if requisitions %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ผู้ขอ</th>
+                <th>ชื่อตำแหน่ง</th>
+                {% if is_hr_user and approval_scope == "all" %}
+                  <th>หัวหน้าผู้อนุมัติ</th>
+                {% endif %}
+                <th>ฝ่าย / แผนก</th>
+                <th>จำนวนที่ขอ</th>
+                <th>สถานะ</th>
+                <th>ความเร่งด่วน</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in requisitions %}
+                <tr>
+                  <td>{{ item.pk }}</td>
+                  <td>{{ item.requester.nickname|default:item.requester.person_unid }}</td>
+                  <td>{{ item.position_title|default:"—" }}</td>
+                  {% if is_hr_user and approval_scope == "all" %}
+                    <td>{{ item.approver_unid }}</td>
+                  {% endif %}
+                  <td>{{ item.requester.division }} / {{ item.requester.department }}</td>
+                  <td>{{ item.required_headcount }}</td>
+                  <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
+                  <td>{{ item.get_priority_display }}</td>
+                  <td><a class="btn btn-outline btn-sm" href="{% url 'recruitment:requisition_detail' item.pk %}">เปิดดู</a></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="empty-state" style="margin-top: 24px; color: var(--color-charcoal);">ไม่มีคำขอรออนุมัติในขณะนี้</p>
       {% endif %}
     </div>
-
-    {% if requisitions %}
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>ผู้ขอ</th>
-              <th>ชื่อตำแหน่ง</th>
-              {% if is_hr_user and approval_scope == "all" %}
-                <th>หัวหน้าผู้อนุมัติ</th>
-              {% endif %}
-              <th>ฝ่าย / แผนก</th>
-              <th>จำนวนที่ขอ</th>
-              <th>สถานะ</th>
-              <th>ความเร่งด่วน</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in requisitions %}
-              <tr>
-                <td>{{ item.pk }}</td>
-                <td>{{ item.requester.nickname|default:item.requester.person_unid }}</td>
-                <td>{{ item.position_title|default:"—" }}</td>
-                {% if is_hr_user and approval_scope == "all" %}
-                  <td>{{ item.approver_unid }}</td>
-                {% endif %}
-                <td>{{ item.requester.division }} / {{ item.requester.department }}</td>
-                <td>{{ item.required_headcount }}</td>
-                <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
-                <td>{{ item.get_priority_display }}</td>
-                <td><a class="btn btn-outline btn-sm" href="{% url 'recruitment:requisition_detail' item.pk %}">เปิดดู</a></td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <p class="empty-state">ไม่มีคำขอรออนุมัติในขณะนี้</p>
-    {% endif %}
   </div>
-</section>
+</div>
 {% endblock %}

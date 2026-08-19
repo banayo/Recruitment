@@ -1,10 +1,12 @@
 from django import forms
-from django.forms import inlineformset_factory
 
+from .address import lookup_zip
 from .models import (
     Acquaintance,
     Candidate,
     Company,
+    ContractTemplate,
+    ContractType,
     Department,
     Division,
     EmployeeLevel,
@@ -21,7 +23,6 @@ CANDIDATE_REQUIRED_FIELDS = (
     "title_name_th",
     "first_name_th",
     "last_name_th",
-    "title_name",
     "first_name",
     "last_name",
     "sex",
@@ -39,7 +40,7 @@ CANDIDATE_PRESENT_FIELDS = (
     "province_present",
 )
 CANDIDATE_FIELD_LABELS = {
-    "title_name_th": "คำนำหน้า (ไทย)",
+    "title_name_th": "คำนำหน้า",
     "first_name_th": "ชื่อ (ไทย)",
     "last_name_th": "นามสกุล (ไทย)",
     "title_name": "คำนำหน้า (อังกฤษ)",
@@ -59,6 +60,19 @@ CANDIDATE_FIELD_LABELS = {
 }
 
 
+TITLE_TH_TO_EN = {
+    "นาย": "Mr.",
+    "นาง": "Mrs.",
+    "นางสาว": "Miss",
+}
+TITLE_TH_CHOICES = [
+    ("", "เลือกคำนำหน้า"),
+    ("นาย", "นาย"),
+    ("นาง", "นาง"),
+    ("นางสาว", "นางสาว"),
+]
+
+
 def candidate_missing_profile_labels(candidate):
     missing = []
     for name in CANDIDATE_REQUIRED_FIELDS:
@@ -71,6 +85,56 @@ def candidate_missing_profile_labels(candidate):
     if not present_filled:
         missing.extend(CANDIDATE_FIELD_LABELS[name] for name in CANDIDATE_PRESENT_FIELDS)
     return missing
+
+
+class AnyTambonField(forms.ChoiceField):
+    def valid_value(self, value):
+        return True
+
+
+class TambonSelect(forms.Select):
+    def __init__(self, attrs=None, choices=(), extra=None):
+        self.extra = extra or {}
+        super().__init__(attrs, choices)
+
+    def create_option(
+        self, name, value, label, selected, index, subindex=None, attrs=None
+    ):
+        option = super().create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+        meta = self.extra.get(str(value or ""), {})
+        if meta:
+            option["attrs"]["data-amphure"] = meta.get("amphure") or ""
+            option["attrs"]["data-province"] = meta.get("province") or ""
+        return option
+
+
+def _posted_or_instance(form, name):
+    if form.is_bound:
+        return form.data.get(form.add_prefix(name)) or ""
+    return form.initial.get(name) or getattr(form.instance, name, "") or ""
+
+
+def tambon_choice_data(zip_code, selected=""):
+    choices = [("", "เลือกหลังกรอกรหัสไปรษณีย์")]
+    extra = {}
+    try:
+        rows = lookup_zip(zip_code)
+    except Exception:
+        rows = []
+    seen = {""}
+    for row in rows:
+        name = (row.get("tambon") or "").strip()
+        if not name or name in seen:
+            continue
+        choices.append((name, name))
+        extra[name] = row
+        seen.add(name)
+    selected = (selected or "").strip()
+    if selected and selected not in seen:
+        choices.append((selected, selected))
+    return choices, extra
 
 
 class CompanyForm(forms.ModelForm):
@@ -101,6 +165,16 @@ class EmployeeLevelForm(forms.ModelForm):
             "name": forms.TextInput(attrs={"class": "text-input"}),
         }
         labels = {"name": "ระดับพนักงาน", "is_active": "เปิดใช้งาน"}
+
+
+class ContractTypeForm(forms.ModelForm):
+    class Meta:
+        model = ContractType
+        fields = ("name", "is_active")
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "text-input"}),
+        }
+        labels = {"name": "ประเภทสัญญา", "is_active": "เปิดใช้งาน"}
 
 
 class DivisionForm(forms.ModelForm):
@@ -451,10 +525,15 @@ class StartWorkForm(forms.ModelForm):
         initial=True,
         label="เพิ่มนัดใน Google Calendar",
     )
+    issue_contract = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="ออกหนังสือตามสัญญา (ดาวน์โหลดไฟล์ Word)",
+    )
 
     class Meta:
         model = EmployeeRecord
-        fields = ("start_date", "company", "location", "employee_level")
+        fields = ("start_date", "company", "location", "employee_level", "contract_type")
         widgets = {
             "start_date": forms.DateInput(
                 attrs={"class": "text-input form-control", "type": "date"}
@@ -462,12 +541,14 @@ class StartWorkForm(forms.ModelForm):
             "company": forms.Select(attrs={"class": "text-input form-control"}),
             "location": forms.Select(attrs={"class": "text-input form-control"}),
             "employee_level": forms.Select(attrs={"class": "text-input form-control"}),
+            "contract_type": forms.Select(attrs={"class": "text-input form-control"}),
         }
         labels = {
             "start_date": "วันที่เริ่มงาน",
             "company": "บริษัท",
             "location": "สถานที่ทำงาน",
             "employee_level": "ระดับพนักงาน",
+            "contract_type": "ประเภทสัญญา",
         }
 
     def __init__(self, *args, **kwargs):
@@ -481,6 +562,16 @@ class StartWorkForm(forms.ModelForm):
         self.fields["employee_level"].required = True
         self.fields["employee_level"].queryset = EmployeeLevel.objects.filter(
             is_active=True
+        )
+        self.fields["contract_type"].required = True
+        type_ids = list(
+            ContractType.objects.filter(is_active=True).values_list("pk", flat=True)
+        )
+        current_type_id = getattr(self.instance, "contract_type_id", None)
+        if current_type_id and current_type_id not in type_ids:
+            type_ids.append(current_type_id)
+        self.fields["contract_type"].queryset = ContractType.objects.filter(
+            pk__in=type_ids
         )
         if application and not self.is_bound:
             self.fields["position"].initial = application.position_id
@@ -498,9 +589,48 @@ class StartWorkForm(forms.ModelForm):
                 "company",
                 "location",
                 "employee_level",
+                "contract_type",
+                "issue_contract",
                 "add_google_calendar",
             ]
         )
+
+
+class ContractTemplateForm(forms.ModelForm):
+    class Meta:
+        model = ContractTemplate
+        fields = ("contract_type", "name", "file", "is_active")
+        widgets = {
+            "contract_type": forms.Select(attrs={"class": "text-input"}),
+            "name": forms.TextInput(attrs={"class": "text-input"}),
+            "file": forms.ClearableFileInput(attrs={"class": "text-input"}),
+        }
+        labels = {
+            "contract_type": "ประเภทสัญญา",
+            "name": "ชื่อเอกสาร",
+            "file": "ไฟล์แม่แบบ (.docx)",
+            "is_active": "เปิดใช้งาน",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        type_ids = list(
+            ContractType.objects.filter(is_active=True).values_list("pk", flat=True)
+        )
+        current_type_id = getattr(self.instance, "contract_type_id", None)
+        if current_type_id and current_type_id not in type_ids:
+            type_ids.append(current_type_id)
+        self.fields["contract_type"].queryset = ContractType.objects.filter(
+            pk__in=type_ids
+        )
+        if self.instance.pk:
+            self.fields["file"].required = False
+
+    def clean_file(self):
+        uploaded = self.cleaned_data.get("file")
+        if uploaded and not str(uploaded.name).lower().endswith(".docx"):
+            raise forms.ValidationError("อัปโหลดได้เฉพาะไฟล์ .docx")
+        return uploaded
 
 
 class CandidateForm(forms.ModelForm):
@@ -516,7 +646,6 @@ class CandidateForm(forms.ModelForm):
             "title_name_th",
             "first_name_th",
             "last_name_th",
-            "title_name",
             "first_name",
             "last_name",
             "nickname",
@@ -539,10 +668,9 @@ class CandidateForm(forms.ModelForm):
             "province_present",
         )
         widgets = {
-            "title_name_th": forms.TextInput(attrs={"class": "text-input"}),
+            "title_name_th": forms.Select(attrs={"class": "text-input"}),
             "first_name_th": forms.TextInput(attrs={"class": "text-input"}),
             "last_name_th": forms.TextInput(attrs={"class": "text-input"}),
-            "title_name": forms.TextInput(attrs={"class": "text-input"}),
             "first_name": forms.TextInput(attrs={"class": "text-input"}),
             "last_name": forms.TextInput(attrs={"class": "text-input"}),
             "nickname": forms.TextInput(attrs={"class": "text-input"}),
@@ -606,33 +734,61 @@ class CandidateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name in ("tambon", "tambon_present"):
-            value = ""
-            if self.is_bound:
-                value = self.data.get(self.add_prefix(name)) or ""
-            if not value:
-                value = self.initial.get(name) or getattr(self.instance, name, "") or ""
-            choices = [("", "เลือกหลังกรอกรหัสไปรษณีย์")]
-            if value:
-                choices.append((value, value))
-            self.fields[name].choices = choices
-            self.fields[name].required = False
+        tambon_widget = {
+            "class": "text-input js-tambon",
+            "data-group": "id",
+        }
+        tambon_present_widget = {
+            "class": "text-input js-tambon",
+            "data-group": "present",
+        }
+        id_choices, id_extra = tambon_choice_data(
+            _posted_or_instance(self, "zip"),
+            _posted_or_instance(self, "tambon"),
+        )
+        present_choices, present_extra = tambon_choice_data(
+            _posted_or_instance(self, "zip_present"),
+            _posted_or_instance(self, "tambon_present"),
+        )
+        self.fields["tambon"] = AnyTambonField(
+            choices=id_choices,
+            required=False,
+            widget=TambonSelect(attrs=tambon_widget, extra=id_extra),
+            label=CANDIDATE_FIELD_LABELS["tambon"],
+        )
+        self.fields["tambon_present"] = AnyTambonField(
+            choices=present_choices,
+            required=False,
+            widget=TambonSelect(attrs=tambon_present_widget, extra=present_extra),
+            label=CANDIDATE_FIELD_LABELS["tambon_present"],
+        )
+        self.fields["title_name_th"] = forms.ChoiceField(
+            choices=TITLE_TH_CHOICES,
+            required=False,
+            widget=forms.Select(attrs={"class": "text-input"}),
+            label="คำนำหน้า",
+        )
+        current_title = ""
+        if self.is_bound:
+            current_title = self.data.get(self.add_prefix("title_name_th")) or ""
+        if not current_title:
+            current_title = (
+                self.initial.get("title_name_th")
+                or getattr(self.instance, "title_name_th", "")
+                or ""
+            )
+        if current_title and current_title not in dict(TITLE_TH_CHOICES):
+            self.fields["title_name_th"].choices = TITLE_TH_CHOICES + [
+                (current_title, current_title)
+            ]
         self.fields["sex"] = forms.ChoiceField(
             choices=[("", "เลือกเพศ"), ("ชาย", "ชาย"), ("หญิง", "หญิง")],
-            required=True,
+            required=False,
             widget=forms.Select(attrs={"class": "text-input"}),
             label="เพศ",
         )
-        for name in CANDIDATE_REQUIRED_FIELDS:
-            self.fields[name].required = True
-            label = self.fields[name].label or CANDIDATE_FIELD_LABELS.get(name, name)
-            if not str(label).endswith("*"):
-                self.fields[name].label = f"{label} *"
-        for name in CANDIDATE_PRESENT_FIELDS:
+        for name in CANDIDATE_REQUIRED_FIELDS + CANDIDATE_PRESENT_FIELDS:
             self.fields[name].required = False
-            label = self.fields[name].label or CANDIDATE_FIELD_LABELS.get(name, name)
-            if not str(label).endswith("*"):
-                self.fields[name].label = f"{label} *"
         if self.instance and self.instance.pk:
             same = (
                 (self.instance.address_present or "") == (self.instance.address or "")
@@ -647,7 +803,6 @@ class CandidateForm(forms.ModelForm):
                 "title_name_th",
                 "first_name_th",
                 "last_name_th",
-                "title_name",
                 "first_name",
                 "last_name",
                 "nickname",
@@ -674,17 +829,21 @@ class CandidateForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
+        data["title_name"] = TITLE_TH_TO_EN.get(data.get("title_name_th") or "", "")
         if data.get("same_as_id_address"):
             data["address_present"] = data.get("address")
             data["zip_present"] = data.get("zip")
             data["tambon_present"] = data.get("tambon")
             data["amphure_present"] = data.get("amphure")
             data["province_present"] = data.get("province")
-        else:
-            for name in CANDIDATE_PRESENT_FIELDS:
-                if not str(data.get(name) or "").strip():
-                    self.add_error(name, "กรอกข้อมูลนี้ หรือติ๊กที่อยู่ปัจจุบันเหมือนที่อยู่ตามบัตร")
         return data
+
+    def save(self, commit=True):
+        candidate = super().save(commit=False)
+        candidate.title_name = self.cleaned_data.get("title_name") or None
+        if commit:
+            candidate.save()
+        return candidate
 
     def clean_email(self):
         value = (self.cleaned_data.get("email") or "").strip()
@@ -694,33 +853,7 @@ class CandidateForm(forms.ModelForm):
         return (self.cleaned_data.get("phone_number") or "").strip()
 
 
-class OptionalInlineForm(forms.ModelForm):
-    required_when_filled = ()
-
-    def _row_has_data(self):
-        skip = {"id", "DELETE", "candidate"}
-        for name in self.fields:
-            if name in skip:
-                continue
-            value = self.cleaned_data.get(name)
-            if value not in (None, "", False):
-                return True
-        return False
-
-    def clean(self):
-        cleaned = super().clean()
-        if cleaned.get("DELETE"):
-            return cleaned
-        if self._row_has_data():
-            for name in self.required_when_filled:
-                if not cleaned.get(name) and cleaned.get(name) != 0:
-                    self.add_error(name, "กรอกข้อมูลนี้")
-        return cleaned
-
-
-class StudyForm(OptionalInlineForm):
-    required_when_filled = ("education", "institution")
-
+class StudyForm(forms.ModelForm):
     class Meta:
         model = Study
         fields = ("education", "institution", "major", "graduation", "grade", "country")
@@ -743,20 +876,16 @@ class StudyForm(OptionalInlineForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name in self.fields:
-            self.fields[name].required = False
-        self.fields["education"].choices = [("", "ไม่ระบุ")] + list(
+        self.fields["education"].required = True
+        self.fields["institution"].required = True
+        self.fields["education"].choices = [("", "เลือกระดับ")] + list(
             Study.EDUCATION_CHOICES
         )
+        self.fields["country"].required = False
         self.fields["country"].choices = [("", "ไม่ระบุ")] + list(Study.COUNTRY_CHOICES)
-        if not self.instance.pk:
-            self.initial.setdefault("country", "")
-            self.fields["country"].initial = ""
 
 
-class GuarantorForm(OptionalInlineForm):
-    required_when_filled = ("name", "phone_number")
-
+class GuarantorForm(forms.ModelForm):
     class Meta:
         model = Guarantor
         fields = ("name", "phone_number", "relation", "address")
@@ -775,16 +904,15 @@ class GuarantorForm(OptionalInlineForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name in self.fields:
-            self.fields[name].required = False
+        self.fields["name"].required = True
+        self.fields["phone_number"].required = True
+        self.fields["relation"].required = False
         self.fields["relation"].choices = [("", "ไม่ระบุ")] + [
             (k, v) for k, v in self.fields["relation"].choices if k != ""
         ]
 
 
-class AcquaintanceForm(OptionalInlineForm):
-    required_when_filled = ("name", "phone_number")
-
+class AcquaintanceForm(forms.ModelForm):
     class Meta:
         model = Acquaintance
         fields = ("name", "phone_number", "relation")
@@ -801,31 +929,9 @@ class AcquaintanceForm(OptionalInlineForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name in self.fields:
-            self.fields[name].required = False
+        self.fields["name"].required = True
+        self.fields["phone_number"].required = True
+        self.fields["relation"].required = False
         self.fields["relation"].choices = [("", "ไม่ระบุ")] + [
             (k, v) for k, v in self.fields["relation"].choices if k != ""
         ]
-
-
-StudyFormSet = inlineformset_factory(
-    Candidate,
-    Study,
-    form=StudyForm,
-    extra=1,
-    can_delete=True,
-)
-GuarantorFormSet = inlineformset_factory(
-    Candidate,
-    Guarantor,
-    form=GuarantorForm,
-    extra=1,
-    can_delete=True,
-)
-AcquaintanceFormSet = inlineformset_factory(
-    Candidate,
-    Acquaintance,
-    form=AcquaintanceForm,
-    extra=1,
-    can_delete=True,
-)

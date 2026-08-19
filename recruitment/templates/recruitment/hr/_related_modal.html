@@ -1,0 +1,24 @@
+<dialog class="modal-dialog" id="{{ modal_id }}"{% if open_modal == modal_id %} data-auto-open="1"{% endif %}>
+  <form method="post" action="{{ action }}" class="modal-form">
+    {% csrf_token %}
+    <div class="modal-head">
+      <h2 class="surface-card-title">{{ title }}</h2>
+      <button type="button" class="btn btn-outline btn-sm" data-close-modal>ปิด</button>
+    </div>
+    <div class="modal-body">
+      {% for field in related_form %}
+        <div class="form-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}
+            <p class="field-error">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="modal-foot cta-group">
+      <button type="submit" class="btn btn-primary">บันทึก</button>
+      <button type="button" class="btn btn-outline" data-close-modal>ยกเลิก</button>
+    </div>
+  </form>
+</dialog>

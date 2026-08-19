@@ -61,6 +61,32 @@ urlpatterns = [
         views.employee_level_edit,
         name="employee_level_edit",
     ),
+    path("contract-types/", views.contract_type_list, name="contract_type_list"),
+    path(
+        "contract-types/new/",
+        views.contract_type_create,
+        name="contract_type_create",
+    ),
+    path(
+        "contract-types/<int:pk>/edit/",
+        views.contract_type_edit,
+        name="contract_type_edit",
+    ),
+    path(
+        "contract-templates/",
+        views.contract_template_list,
+        name="contract_template_list",
+    ),
+    path(
+        "contract-templates/new/",
+        views.contract_template_create,
+        name="contract_template_create",
+    ),
+    path(
+        "contract-templates/<int:pk>/edit/",
+        views.contract_template_edit,
+        name="contract_template_edit",
+    ),
     path("candidates/", views.list_candidate, name="list_candidate"),
     path(
         "candidates/address-lookup/",
@@ -68,6 +94,60 @@ urlpatterns = [
         name="lookup_thai_address",
     ),
     path("candidates/<int:pk>/edit/", views.candidate_edit, name="candidate_edit"),
+    path(
+        "candidates/<int:pk>/studies/add/",
+        views.candidate_related_add,
+        {"kind": "study"},
+        name="candidate_study_add",
+    ),
+    path(
+        "candidates/<int:pk>/studies/<int:item_id>/edit/",
+        views.candidate_related_edit,
+        {"kind": "study"},
+        name="candidate_study_edit",
+    ),
+    path(
+        "candidates/<int:pk>/studies/<int:item_id>/delete/",
+        views.candidate_related_delete,
+        {"kind": "study"},
+        name="candidate_study_delete",
+    ),
+    path(
+        "candidates/<int:pk>/guarantors/add/",
+        views.candidate_related_add,
+        {"kind": "guarantor"},
+        name="candidate_guarantor_add",
+    ),
+    path(
+        "candidates/<int:pk>/guarantors/<int:item_id>/edit/",
+        views.candidate_related_edit,
+        {"kind": "guarantor"},
+        name="candidate_guarantor_edit",
+    ),
+    path(
+        "candidates/<int:pk>/guarantors/<int:item_id>/delete/",
+        views.candidate_related_delete,
+        {"kind": "guarantor"},
+        name="candidate_guarantor_delete",
+    ),
+    path(
+        "candidates/<int:pk>/acquaintances/add/",
+        views.candidate_related_add,
+        {"kind": "acquaintance"},
+        name="candidate_acquaintance_add",
+    ),
+    path(
+        "candidates/<int:pk>/acquaintances/<int:item_id>/edit/",
+        views.candidate_related_edit,
+        {"kind": "acquaintance"},
+        name="candidate_acquaintance_edit",
+    ),
+    path(
+        "candidates/<int:pk>/acquaintances/<int:item_id>/delete/",
+        views.candidate_related_delete,
+        {"kind": "acquaintance"},
+        name="candidate_acquaintance_delete",
+    ),
     path("applications/", views.list_job_application, name="list_job_application"),
     path(
         "applications/<int:pk>/edit/",
@@ -88,6 +168,11 @@ urlpatterns = [
         "applications/<int:application_id>/start-work/",
         views.schedule_start_work,
         name="schedule_start_work",
+    ),
+    path(
+        "applications/<int:application_id>/contract/",
+        views.download_application_contract,
+        name="download_application_contract",
     ),
     path("candidates/check/", views.check_candidate, name="check_candidate"),
     path(

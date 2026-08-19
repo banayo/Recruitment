@@ -1,30 +1,51 @@
-{% for field in form %}
-  {% if field.name == "title_name" %}
-    <h2 class="surface-card-title">ชื่อภาษาอังกฤษ</h2>
-  {% elif field.name == "address" %}
-    <h2 class="surface-card-title">ที่อยู่ตามบัตรประชาชน</h2>
-    <p class="page-copy">กรอกบ้านเลขที่ แล้วใส่รหัสไปรษณีย์ — แขวง เขต จังหวัดจะขึ้นเอง</p>
-  {% elif field.name == "same_as_id_address" %}
-    <h2 class="surface-card-title">ที่อยู่ปัจจุบัน</h2>
+<div class="form-grid form-grid-3">
+  {% include "recruitment/hr/_form_field.html" with field=form.title_name_th %}
+  {% include "recruitment/hr/_form_field.html" with field=form.first_name_th %}
+  {% include "recruitment/hr/_form_field.html" with field=form.last_name_th %}
+</div>
+<div class="form-grid form-grid-3">
+  {% include "recruitment/hr/_form_field.html" with field=form.first_name %}
+  {% include "recruitment/hr/_form_field.html" with field=form.last_name %}
+  {% include "recruitment/hr/_form_field.html" with field=form.nickname %}
+</div>
+<div class="form-grid form-grid-3">
+  {% include "recruitment/hr/_form_field.html" with field=form.email %}
+  {% include "recruitment/hr/_form_field.html" with field=form.phone_number %}
+  {% include "recruitment/hr/_form_field.html" with field=form.phone_number1 %}
+</div>
+<div class="form-grid form-grid-3">
+  {% include "recruitment/hr/_form_field.html" with field=form.idcard %}
+  {% include "recruitment/hr/_form_field.html" with field=form.sex %}
+  {% include "recruitment/hr/_form_field.html" with field=form.birthday %}
+</div>
+{% include "recruitment/hr/_form_field.html" with field=form.profile_picture %}
+
+<h2 class="surface-card-title">ที่อยู่ตามบัตรประชาชน</h2>
+<p class="page-copy">กรอกบ้านเลขที่ แล้วใส่รหัสไปรษณีย์ — แขวง เขต จังหวัดจะขึ้นเอง</p>
+{% include "recruitment/hr/_form_field.html" with field=form.address %}
+<div class="form-grid form-grid-3">
+  {% include "recruitment/hr/_form_field.html" with field=form.zip %}
+  {% include "recruitment/hr/_form_field.html" with field=form.tambon %}
+  {% include "recruitment/hr/_form_field.html" with field=form.amphure %}
+</div>
+{% include "recruitment/hr/_form_field.html" with field=form.province %}
+
+<h2 class="surface-card-title">ที่อยู่ปัจจุบัน</h2>
+<div class="form-field form-field-check">
+  {{ form.same_as_id_address }}
+  <label for="{{ form.same_as_id_address.id_for_label }}">{{ form.same_as_id_address.label }}</label>
+  {% if form.same_as_id_address.errors %}
+    <p class="field-error">{{ form.same_as_id_address.errors|striptags }}</p>
   {% endif %}
-  {% if field.field.widget.input_type == "checkbox" %}
-    <div class="form-field form-field-check">
-      {{ field }}
-      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {% if field.errors %}
-        <p class="field-error">{{ field.errors|striptags }}</p>
-      {% endif %}
-    </div>
-  {% else %}
-    <div class="form-field{% if field.name == 'address_present' or field.name == 'zip_present' or field.name == 'tambon_present' or field.name == 'amphure_present' or field.name == 'province_present' %} js-present-address{% endif %}">
-      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-      {% if field.help_text %}
-        <p class="page-copy">{{ field.help_text }}</p>
-      {% endif %}
-      {% if field.errors %}
-        <p class="field-error">{{ field.errors|striptags }}</p>
-      {% endif %}
-    </div>
-  {% endif %}
-{% endfor %}
+</div>
+<div class="js-present-address">
+  {% include "recruitment/hr/_form_field.html" with field=form.address_present %}
+</div>
+<div class="form-grid form-grid-3 js-present-address">
+  {% include "recruitment/hr/_form_field.html" with field=form.zip_present %}
+  {% include "recruitment/hr/_form_field.html" with field=form.tambon_present %}
+  {% include "recruitment/hr/_form_field.html" with field=form.amphure_present %}
+</div>
+<div class="js-present-address">
+  {% include "recruitment/hr/_form_field.html" with field=form.province_present %}
+</div>

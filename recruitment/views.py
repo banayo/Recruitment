@@ -3,20 +3,22 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.db.models import Count, OuterRef, Q, Subquery
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import FileResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 from .address import lookup_zip
 from .auth import can_decide_requisition, can_edit_requisition, can_hr_finalize, can_reject_requisition, can_view_requisition, is_designated_manager, require_hr, user_is_hr
 from .forms import (
-    AcquaintanceFormSet,
+    AcquaintanceForm,
     CandidateForm,
     CompanyForm,
+    ContractTemplateForm,
+    ContractTypeForm,
     DepartmentForm,
     DivisionForm,
     EmployeeLevelForm,
-    GuarantorFormSet,
+    GuarantorForm,
     HRMapForm,
     InterviewForm,
     JobApplicationEditForm,
@@ -26,10 +28,11 @@ from .forms import (
     RequisitionDecideForm,
     RequisitionEditForm,
     StartWorkForm,
-    StudyFormSet,
+    StudyForm,
     WorkLocationForm,
     candidate_missing_profile_labels,
 )
+from .contract_docx import CONTRACT_PLACEHOLDER_HELP, build_contract_download
 from .line import build_authorize_url, fetch_line_user_id, line_configured, new_state
 from .mail import (
     create_interview_google_calendar,
@@ -37,7 +40,24 @@ from .mail import (
     interview_end,
     send_candidate_interview_email,
 )
-from .models import Candidate, Company, Department, Division, EmployeeLevel, EmployeeRecord, JobApplication, JobPosition, Requisition, User, WorkLocation
+from .models import (
+    Acquaintance,
+    Candidate,
+    Company,
+    ContractTemplate,
+    ContractType,
+    Department,
+    Division,
+    EmployeeLevel,
+    EmployeeRecord,
+    Guarantor,
+    JobApplication,
+    JobPosition,
+    Requisition,
+    Study,
+    User,
+    WorkLocation,
+)
 from .services import approve_requisition, map_position_and_sync, reject_requisition
 
 
@@ -631,12 +651,19 @@ def _hr_named_master_form(
     page_copy,
     success_message,
     active_nav,
+    multipart=False,
+    after_save=None,
 ):
     if not require_hr(request):
         return HttpResponseForbidden("เฉพาะ HR")
-    form = form_class(request.POST or None, instance=instance)
+    form = form_class(request.POST or None, request.FILES or None, instance=instance)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        if after_save:
+            obj = form.save(commit=False)
+            after_save(obj)
+            obj.save()
+        else:
+            form.save()
         messages.success(request, success_message)
         return redirect(list_url)
     return render(
@@ -648,6 +675,7 @@ def _hr_named_master_form(
             "page_copy": page_copy,
             "cancel_url": list_url,
             "active_nav": active_nav,
+            "form_enctype": "multipart/form-data" if multipart else None,
         },
     )
 
@@ -790,6 +818,99 @@ def employee_level_edit(request, pk):
         page_copy="อัปเดตชื่อหรือสถานะใช้งาน",
         success_message="บันทึกระดับพนักงานแล้ว",
         active_nav="levels",
+    )
+
+
+@login_required
+def contract_type_list(request):
+    return _hr_named_master_list(
+        request,
+        queryset=ContractType.objects.all().order_by("name"),
+        list_url="recruitment:contract_type_list",
+        create_url="recruitment:contract_type_create",
+        edit_url="recruitment:contract_type_edit",
+        page_title="ประเภทสัญญา",
+        page_copy="Master ประเภทสัญญา — ใช้ตอนนัดเริ่มงานและเลือกแม่แบบ",
+        add_label="เพิ่มประเภทสัญญา",
+        search_placeholder="ค้นหาประเภทสัญญา",
+        active_nav="contract_types",
+    )
+
+
+@login_required
+def contract_type_create(request):
+    return _hr_named_master_form(
+        request,
+        form_class=ContractTypeForm,
+        instance=None,
+        list_url="recruitment:contract_type_list",
+        page_title="เพิ่มประเภทสัญญา",
+        page_copy="สร้างประเภทสัญญาใน master data",
+        success_message="เพิ่มประเภทสัญญาแล้ว",
+        active_nav="contract_types",
+    )
+
+
+@login_required
+def contract_type_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    contract_type = get_object_or_404(ContractType, pk=pk)
+    return _hr_named_master_form(
+        request,
+        form_class=ContractTypeForm,
+        instance=contract_type,
+        list_url="recruitment:contract_type_list",
+        page_title=f"แก้ไขประเภท {contract_type.name}",
+        page_copy="อัปเดตชื่อหรือสถานะใช้งาน",
+        success_message="บันทึกประเภทสัญญาแล้ว",
+        active_nav="contract_types",
+    )
+
+
+@login_required
+def contract_template_list(request):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    items = ContractTemplate.objects.select_related("contract_type")
+    return render(
+        request,
+        "recruitment/hr/contract_template_list.html",
+        {"items": items},
+    )
+
+
+@login_required
+def contract_template_create(request):
+    return _hr_named_master_form(
+        request,
+        form_class=ContractTemplateForm,
+        instance=None,
+        list_url="recruitment:contract_template_list",
+        page_title="เพิ่มแม่แบบสัญญา",
+        page_copy=CONTRACT_PLACEHOLDER_HELP,
+        success_message="เพิ่มแม่แบบสัญญาแล้ว",
+        active_nav="contracts",
+        multipart=True,
+        after_save=lambda obj: setattr(obj, "uploaded_by", request.user),
+    )
+
+
+@login_required
+def contract_template_edit(request, pk):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    template = get_object_or_404(ContractTemplate, pk=pk)
+    return _hr_named_master_form(
+        request,
+        form_class=ContractTemplateForm,
+        instance=template,
+        list_url="recruitment:contract_template_list",
+        page_title=f"แก้ไขแม่แบบ {template.name}",
+        page_copy=CONTRACT_PLACEHOLDER_HELP,
+        success_message="บันทึกแม่แบบสัญญาแล้ว",
+        active_nav="contracts",
+        multipart=True,
     )
 
 
@@ -1067,9 +1188,9 @@ def schedule_start_work(request, application_id):
     )
     if application.status not in (
         JobApplication.Status.INTERVIEWING,
-        JobApplication.Status.OFFERED,
+        JobApplication.Status.START_WORK,
     ):
-        messages.error(request, "นัดเริ่มงานได้เมื่อสถานะเป็นนัดสัมภาษณ์หรือเสนอจ้างงาน")
+        messages.error(request, "นัดเริ่มงานได้เมื่อสถานะเป็นนัดสัมภาษณ์หรือนัดเริ่มงาน")
         return redirect("recruitment:job_application_detail", pk=application.pk)
 
     missing = candidate_missing_profile_labels(application.candidate)
@@ -1099,10 +1220,12 @@ def schedule_start_work(request, application_id):
             record.application = application
             if not record.employee_code:
                 record.employee_code = f"TMP{application.pk:06d}"
+            if not record.document_code:
+                record.document_code = f"DOC{application.pk:06d}"
             record.save()
             application.position = form.cleaned_data["position"]
             application.start_work_date = record.start_date
-            application.status = JobApplication.Status.OFFERED
+            application.status = JobApplication.Status.START_WORK
             application.save()
             notes = ["ยืนยันตำแหน่งและบันทึกนัดเริ่มงานแล้ว"]
             if form.cleaned_data.get("add_google_calendar"):
@@ -1111,6 +1234,20 @@ def schedule_start_work(request, application_id):
                     notes.append(f"Google Calendar: {cal_dest}" if sent_cal else cal_dest)
                 except Exception as exc:
                     notes.append(f"สร้างนัดใน Google Calendar ไม่สำเร็จ ({exc})")
+            if form.cleaned_data.get("issue_contract"):
+                buffer, filename, error = build_contract_download(application, record)
+                if error:
+                    notes.append(error)
+                    messages.success(request, " · ".join(notes))
+                    return redirect(
+                        "recruitment:job_application_detail", pk=application.pk
+                    )
+                messages.success(request, " · ".join(notes))
+                return FileResponse(
+                    buffer,
+                    as_attachment=True,
+                    filename=filename,
+                )
             messages.success(request, " · ".join(notes))
             return redirect("recruitment:job_application_detail", pk=application.pk)
     else:
@@ -1120,6 +1257,28 @@ def schedule_start_work(request, application_id):
         "recruitment/hr/schedule_start_work.html",
         {"form": form, "application": application},
     )
+
+
+@login_required
+def download_application_contract(request, application_id):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    application = get_object_or_404(
+        JobApplication.objects.select_related("candidate", "position", "hired_record"),
+        pk=application_id,
+    )
+    record = getattr(application, "hired_record", None)
+    if application.status != JobApplication.Status.START_WORK or record is None:
+        messages.error(request, "ออกหนังสือได้เมื่อมีนัดเริ่มงานแล้ว")
+        return redirect("recruitment:job_application_detail", pk=application.pk)
+    if not record.contract_type:
+        messages.error(request, "เลือกประเภทสัญญาก่อนออกหนังสือ")
+        return redirect("recruitment:schedule_start_work", application_id=application.pk)
+    buffer, filename, error = build_contract_download(application, record)
+    if error:
+        messages.error(request, error)
+        return redirect("recruitment:job_application_detail", pk=application.pk)
+    return FileResponse(buffer, as_attachment=True, filename=filename)
 
 
 @login_required
@@ -1197,37 +1356,157 @@ def candidate_edit(request, pk):
     candidate = get_object_or_404(Candidate, pk=pk)
     if request.method == "POST":
         form = CandidateForm(request.POST, request.FILES, instance=candidate)
-        study_formset = StudyFormSet(request.POST, instance=candidate)
-        guarantor_formset = GuarantorFormSet(request.POST, instance=candidate)
-        acquaintance_formset = AcquaintanceFormSet(request.POST, instance=candidate)
-        if (
-            form.is_valid()
-            and study_formset.is_valid()
-            and guarantor_formset.is_valid()
-            and acquaintance_formset.is_valid()
-        ):
+        if form.is_valid():
             form.save()
-            study_formset.save()
-            guarantor_formset.save()
-            acquaintance_formset.save()
             messages.success(request, f"บันทึกข้อมูล {candidate} แล้ว")
             return redirect("recruitment:list_candidate")
     else:
         form = CandidateForm(instance=candidate)
-        study_formset = StudyFormSet(instance=candidate)
-        guarantor_formset = GuarantorFormSet(instance=candidate)
-        acquaintance_formset = AcquaintanceFormSet(instance=candidate)
+    return render_candidate_edit(request, candidate, profile_form=form)
+
+
+RELATED_SPECS = {
+    "study": {
+        "model": Study,
+        "form": StudyForm,
+        "related": "studies",
+        "label": "ประวัติการศึกษา",
+    },
+    "guarantor": {
+        "model": Guarantor,
+        "form": GuarantorForm,
+        "related": "guarantors",
+        "label": "ผู้ค้ำประกัน",
+    },
+    "acquaintance": {
+        "model": Acquaintance,
+        "form": AcquaintanceForm,
+        "related": "acquaintances",
+        "label": "บุคคลอ้างอิง / คนรู้จัก",
+    },
+}
+
+
+def render_candidate_edit(request, candidate, profile_form=None, extra=None):
+    extra = extra or {}
+    studies = list(candidate.studies.all())
+    guarantors = list(candidate.guarantors.all())
+    acquaintances = list(candidate.acquaintances.all())
+    study_forms = extra.get("study_forms") or {}
+    guarantor_forms = extra.get("guarantor_forms") or {}
+    acquaintance_forms = extra.get("acquaintance_forms") or {}
     return render(
         request,
         "recruitment/hr/candidate_edit.html",
         {
-            "form": form,
+            "form": profile_form or CandidateForm(instance=candidate),
             "candidate": candidate,
-            "study_formset": study_formset,
-            "guarantor_formset": guarantor_formset,
-            "acquaintance_formset": acquaintance_formset,
+            "studies": studies,
+            "guarantors": guarantors,
+            "acquaintances": acquaintances,
+            "study_add_form": extra.get("study_add_form")
+            or StudyForm(prefix="study_add"),
+            "guarantor_add_form": extra.get("guarantor_add_form")
+            or GuarantorForm(prefix="guarantor_add"),
+            "acquaintance_add_form": extra.get("acquaintance_add_form")
+            or AcquaintanceForm(prefix="acquaintance_add"),
+            "study_rows": [
+                (
+                    item,
+                    study_forms.get(item.pk)
+                    or StudyForm(instance=item, prefix=f"study_{item.pk}"),
+                )
+                for item in studies
+            ],
+            "guarantor_rows": [
+                (
+                    item,
+                    guarantor_forms.get(item.pk)
+                    or GuarantorForm(instance=item, prefix=f"guarantor_{item.pk}"),
+                )
+                for item in guarantors
+            ],
+            "acquaintance_rows": [
+                (
+                    item,
+                    acquaintance_forms.get(item.pk)
+                    or AcquaintanceForm(
+                        instance=item, prefix=f"acquaintance_{item.pk}"
+                    ),
+                )
+                for item in acquaintances
+            ],
+            "open_modal": extra.get("open_modal", ""),
         },
     )
+
+
+@login_required
+def candidate_related_add(request, pk, kind):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    spec = RELATED_SPECS.get(kind)
+    if spec is None:
+        return redirect("recruitment:candidate_edit", pk=pk)
+    candidate = get_object_or_404(Candidate, pk=pk)
+    if request.method != "POST":
+        return redirect("recruitment:candidate_edit", pk=pk)
+    form = spec["form"](request.POST, prefix=f"{kind}_add")
+    if form.is_valid():
+        item = form.save(commit=False)
+        item.candidate = candidate
+        item.save()
+        messages.success(request, f"เพิ่ม{spec['label']}แล้ว")
+        return redirect("recruitment:candidate_edit", pk=pk)
+    return render_candidate_edit(
+        request,
+        candidate,
+        extra={f"{kind}_add_form": form, "open_modal": f"{kind}-add"},
+    )
+
+
+@login_required
+def candidate_related_edit(request, pk, item_id, kind):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    spec = RELATED_SPECS.get(kind)
+    if spec is None:
+        return redirect("recruitment:candidate_edit", pk=pk)
+    candidate = get_object_or_404(Candidate, pk=pk)
+    item = get_object_or_404(spec["model"], pk=item_id, candidate=candidate)
+    if request.method != "POST":
+        return redirect("recruitment:candidate_edit", pk=pk)
+    form = spec["form"](request.POST, instance=item, prefix=f"{kind}_{item.pk}")
+    if form.is_valid():
+        form.save()
+        messages.success(request, f"บันทึก{spec['label']}แล้ว")
+        return redirect("recruitment:candidate_edit", pk=pk)
+    forms_key = f"{kind}_forms"
+    forms_map = {
+        obj.pk: spec["form"](instance=obj, prefix=f"{kind}_{obj.pk}")
+        for obj in getattr(candidate, spec["related"]).all()
+    }
+    forms_map[item.pk] = form
+    return render_candidate_edit(
+        request,
+        candidate,
+        extra={forms_key: forms_map, "open_modal": f"{kind}-edit-{item.pk}"},
+    )
+
+
+@login_required
+@require_POST
+def candidate_related_delete(request, pk, item_id, kind):
+    if not require_hr(request):
+        return HttpResponseForbidden("เฉพาะ HR")
+    spec = RELATED_SPECS.get(kind)
+    if spec is None:
+        return redirect("recruitment:candidate_edit", pk=pk)
+    candidate = get_object_or_404(Candidate, pk=pk)
+    item = get_object_or_404(spec["model"], pk=item_id, candidate=candidate)
+    item.delete()
+    messages.success(request, f"ลบ{spec['label']}แล้ว")
+    return redirect("recruitment:candidate_edit", pk=pk)
 
 
 @login_required

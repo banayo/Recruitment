@@ -46,9 +46,7 @@
           <thead>
             <tr>
               <th>ผู้สมัคร</th>
-              <th>เบอร์</th>
               <th>ตำแหน่ง</th>
-              <th>แหล่งที่มา</th>
               <th>สถานะ</th>
               <th>วันที่สมัคร</th>
               <th></th>
@@ -58,14 +56,12 @@
             {% for item in applications %}
               <tr>
                 <td>{{ item.candidate }}</td>
-                <td>{{ item.candidate.phone_number }}</td>
                 <td>
                   {{ item.position.title }}
                   {% if item.position.department %}
                     <span class="muted">{{ item.position.department.division }} / {{ item.position.department }}</span>
                   {% endif %}
                 </td>
-                <td>{{ item.origin|default:"—" }}</td>
                 <td><span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span></td>
                 <td>{{ item.applied_date|date:"d/m/Y H:i" }}</td>
                 <td>
@@ -75,7 +71,7 @@
                     {% elif item.status == "interviewing" %}
                       <a class="btn btn-outline btn-sm" href="{% url 'recruitment:schedule_interview' item.pk %}">แก้ไขนัด</a>
                       <a class="btn btn-primary btn-sm" href="{% url 'recruitment:schedule_start_work' item.pk %}">นัดเริ่มงาน</a>
-                    {% elif item.status == "offered" %}
+                    {% elif item.status == "start_work" %}
                       <a class="btn btn-outline btn-sm" href="{% url 'recruitment:schedule_start_work' item.pk %}">แก้ไขนัดเริ่มงาน</a>
                     {% endif %}
                     <a class="btn btn-outline btn-sm" href="{% url 'recruitment:job_application_detail' item.pk %}">ดูรายละเอียด</a>

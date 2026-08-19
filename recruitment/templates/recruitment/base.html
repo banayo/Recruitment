@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}ระบบสรรหาบุคลากร{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'recruitment/css/design.css' %}">
+  <link rel="stylesheet" href="{% static 'recruitment/css/design.css' %}?v=mobile-form-2">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -24,21 +24,39 @@
           <p class="sidebar-label">พื้นที่ทำงาน</p>
           <ul>
             <li>
-              <a href="{% url 'recruitment:home' %}" class="{% block nav_home %}{% endblock %}">หน้าแรก</a>
+              <a href="{% url 'recruitment:home' %}" class="{% block nav_home %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                  <span>หน้าแรก</span>
+                </div>
+              </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:requisition_list' %}" class="{% block nav_requisitions %}{% endblock %}">คำขออัตรากำลัง</a>
+              <a href="{% url 'recruitment:requisition_list' %}" class="{% block nav_requisitions %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  <span>คำขออัตรากำลัง</span>
+                </div>
+              </a>
             </li>
             <li>
               <a href="{% url 'recruitment:approval_inbox' %}" class="{% block nav_approvals %}{% endblock %}">
-                รออนุมัติ
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                  <span>รออนุมัติ</span>
+                </div>
                 {% if pending_approvals_count %}
                   <span class="nav-count">{{ pending_approvals_count }}</span>
                 {% endif %}
               </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:my_positions' %}" class="{% block nav_my_positions %}{% endblock %}">ตำแหน่งในแผนก</a>
+              <a href="{% url 'recruitment:my_positions' %}" class="{% block nav_my_positions %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                  <span>ตำแหน่งในแผนก</span>
+                </div>
+              </a>
             </li>
           </ul>
         </div>
@@ -48,13 +66,28 @@
           <p class="sidebar-label">สรรหา</p>
           <ul>
             <li>
-              <a href="{% url 'recruitment:list_candidate' %}" class="{% block nav_candidates %}{% endblock %}">ผู้สมัคร</a>
+              <a href="{% url 'recruitment:list_candidate' %}" class="{% block nav_candidates %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                  <span>ผู้สมัคร</span>
+                </div>
+              </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:list_job_application' %}" class="{% block nav_applications %}{% endblock %}">ใบสมัครงาน</a>
+              <a href="{% url 'recruitment:list_job_application' %}" class="{% block nav_applications %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                  <span>ใบสมัครงาน</span>
+                </div>
+              </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:check_candidate' %}" class="{% block nav_check_candidate %}{% endblock %}">ตรวจสอบประวัติผู้สมัคร</a>
+              <a href="{% url 'recruitment:check_candidate' %}" class="{% block nav_check_candidate %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <span>ตรวจสอบประวัติผู้สมัคร</span>
+                </div>
+              </a>
             </li>
           </ul>
         </div>
@@ -62,22 +95,68 @@
           <p class="sidebar-label">ข้อมูลหลัก</p>
           <ul>
             <li>
-              <a href="{% url 'recruitment:division_list' %}" class="{% block nav_divisions %}{% endblock %}">ฝ่าย</a>
+              <a href="{% url 'recruitment:division_list' %}" class="{% block nav_divisions %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                  <span>ฝ่าย</span>
+                </div>
+              </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:department_list' %}" class="{% block nav_departments %}{% endblock %}">แผนก</a>
+              <a href="{% url 'recruitment:department_list' %}" class="{% block nav_departments %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  <span>แผนก</span>
+                </div>
+              </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:position_list' %}" class="{% block nav_positions %}{% endblock %}">ตำแหน่งงาน</a>
+              <a href="{% url 'recruitment:position_list' %}" class="{% block nav_positions %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                  <span>ตำแหน่งงาน</span>
+                </div>
+              </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:company_list' %}" class="{% block nav_companies %}{% endblock %}">บริษัท</a>
+              <a href="{% url 'recruitment:company_list' %}" class="{% block nav_companies %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>
+                  <span>บริษัท</span>
+                </div>
+              </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:work_location_list' %}" class="{% block nav_locations %}{% endblock %}">สถานที่ทำงาน</a>
+              <a href="{% url 'recruitment:work_location_list' %}" class="{% block nav_locations %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  <span>สถานที่ทำงาน</span>
+                </div>
+              </a>
             </li>
             <li>
-              <a href="{% url 'recruitment:employee_level_list' %}" class="{% block nav_levels %}{% endblock %}">ระดับพนักงาน</a>
+              <a href="{% url 'recruitment:employee_level_list' %}" class="{% block nav_levels %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                  <span>ระดับพนักงาน</span>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'recruitment:contract_type_list' %}" class="{% block nav_contract_types %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 8h10"></path><path d="M7 12h10"></path><path d="M7 16h6"></path></svg>
+                  <span>ประเภทสัญญา</span>
+                </div>
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'recruitment:contract_template_list' %}" class="{% block nav_contracts %}{% endblock %}">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  <span>แม่แบบสัญญา</span>
+                </div>
+              </a>
             </li>
           </ul>
         </div>

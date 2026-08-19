@@ -1,0 +1,61 @@
+{% extends "recruitment/base.html" %}
+
+{% block title %}แม่แบบสัญญา{% endblock %}
+{% block nav_contracts %}is-active{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">แม่แบบสัญญา</h1>
+        <p class="page-copy">อัปโหลดไฟล์ Word (.docx) ตามประเภทสัญญา ระบบจะแทนที่รหัสเช่น {% verbatim %}{{ชื่อไทย}}{% endverbatim %} ตอนออกหนังสือ</p>
+      </div>
+      <a class="btn btn-primary" href="{% url 'recruitment:contract_template_create' %}">เพิ่มแม่แบบ</a>
+    </div>
+
+    {% if items %}
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ประเภทสัญญา</th>
+              <th>ชื่อเอกสาร</th>
+              <th>ไฟล์</th>
+              <th>สถานะ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              <tr>
+                <td>{{ item.contract_type }}</td>
+                <td>{{ item.name }}</td>
+                <td>
+                  {% if item.file %}
+                    <a href="{{ item.file.url }}">{{ item.file.name }}</a>
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  {% if item.is_active %}
+                    <span class="badge badge-hired">เปิดใช้งาน</span>
+                  {% else %}
+                    <span class="badge badge-cancelled">ปิดใช้งาน</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a class="btn btn-outline btn-sm" href="{% url 'recruitment:contract_template_edit' item.pk %}">แก้ไข</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="empty-state">ยังไม่มีแม่แบบสัญญา — <a href="{% url 'recruitment:contract_template_create' %}">เพิ่มแม่แบบ</a></p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

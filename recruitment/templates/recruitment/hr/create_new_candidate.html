@@ -5,7 +5,7 @@
 
 {% block content %}
 <section class="page">
-  <div class="container narrow">
+  <div class="container">
     <div class="page-header">
       <div>
         <h1 class="page-title">ไม่พบประวัติ — สร้างผู้สมัครใหม่</h1>
@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="stack-form" data-address-lookup="{% url 'recruitment:lookup_thai_address' %}">
+    <form method="post" enctype="multipart/form-data" class="stack-form surface-card" data-address-lookup="{% url 'recruitment:lookup_thai_address' %}">
       {% csrf_token %}
       {% include "recruitment/hr/_candidate_form_fields.html" with form=form %}
       <div class="cta-group">

@@ -5,36 +5,209 @@
 
 {% block content %}
 <section class="page">
-  <div class="container narrow">
+  <div class="container">
     <div class="page-header">
       <div>
         <h1 class="page-title">แก้ไขผู้สมัคร</h1>
-        <p class="page-copy">ช่องที่มี * ต้องกรอกก่อนยืนยันนัดเริ่มงาน — ประวัติการศึกษา ผู้ค้ำประกัน และคนรู้จักกรอกได้ตามต้องการ</p>
+        <p class="page-copy">ช่วงแรกกรอกเท่าที่มีได้ — ชื่อ เพศ และที่อยู่จะถูกบังคับเมื่อกดนัดเริ่มงาน ประวัติการศึกษา ผู้ค้ำประกัน และคนรู้จักเพิ่มจากปุ่มได้หลายรายการ</p>
       </div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="stack-form" data-address-lookup="{% url 'recruitment:lookup_thai_address' %}">
+    <form id="candidate-profile-form" method="post" enctype="multipart/form-data" class="stack-form surface-card candidate-form-layout" data-address-lookup="{% url 'recruitment:lookup_thai_address' %}">
       {% csrf_token %}
       {% include "recruitment/hr/_candidate_form_fields.html" with form=form %}
-
-      <h2 class="surface-card-title">ประวัติการศึกษา</h2>
-      <p class="page-copy">ไม่บังคับ — แถวว่างระบบจะข้าม ไม่บันทึก</p>
-      {% include "recruitment/hr/_inline_formset.html" with formset=study_formset %}
-
-      <h2 class="surface-card-title">ผู้ค้ำประกัน</h2>
-      <p class="page-copy">ไม่บังคับ — กรอกอย่างน้อยชื่อและเบอร์ถ้าจะบันทึกแถวนั้น</p>
-      {% include "recruitment/hr/_inline_formset.html" with formset=guarantor_formset %}
-
-      <h2 class="surface-card-title">บุคคลอ้างอิง / คนรู้จัก</h2>
-      <p class="page-copy">ไม่บังคับ — กรอกอย่างน้อยชื่อและเบอร์ถ้าจะบันทึกแถวนั้น</p>
-      {% include "recruitment/hr/_inline_formset.html" with formset=acquaintance_formset %}
-
-      <div class="cta-group">
-        <button type="submit" class="btn btn-primary">บันทึก</button>
-        <a class="btn btn-outline" href="{% url 'recruitment:list_candidate' %}">ยกเลิก</a>
-      </div>
     </form>
+
+    <article class="surface-card related-card">
+      <div class="section-head">
+        <div>
+          <h2 class="surface-card-title">ประวัติการศึกษา</h2>
+          <p class="page-copy">ไม่บังคับ — เพิ่มได้มากกว่าหนึ่งรายการ</p>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="study-add">เพิ่มการศึกษา</button>
+      </div>
+      {% if studies %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ระดับ</th>
+                <th>สถาบัน</th>
+                <th>สาขา</th>
+                <th>ปีที่จบ</th>
+                <th>GPA</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item, item_form in study_rows %}
+                <tr>
+                  <td>{{ item.get_education_display }}</td>
+                  <td>{{ item.institution }}</td>
+                  <td>{{ item.major|default:"—" }}</td>
+                  <td>{{ item.graduation|default:"—" }}</td>
+                  <td>{{ item.grade|default:"—" }}</td>
+                  <td>
+                    <div class="table-actions">
+                      <button type="button" class="btn btn-outline btn-sm" data-open-modal="study-edit-{{ item.pk }}">แก้ไข</button>
+                      <form method="post" action="{% url 'recruitment:candidate_study_delete' candidate.pk item.pk %}" onsubmit="return confirm('ลบประวัติการศึกษานี้?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline btn-sm">ลบ</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="empty-state">ยังไม่มีประวัติการศึกษา</p>
+      {% endif %}
+    </article>
+
+    <article class="surface-card related-card">
+      <div class="section-head">
+        <div>
+          <h2 class="surface-card-title">ผู้ค้ำประกัน</h2>
+          <p class="page-copy">ไม่บังคับ — เพิ่มได้มากกว่าหนึ่งรายการ</p>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="guarantor-add">เพิ่มผู้ค้ำประกัน</button>
+      </div>
+      {% if guarantors %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ชื่อ</th>
+                <th>เบอร์</th>
+                <th>ความสัมพันธ์</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item, item_form in guarantor_rows %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.phone_number }}</td>
+                  <td>{{ item.get_relation_display|default:"—" }}</td>
+                  <td>
+                    <div class="table-actions">
+                      <button type="button" class="btn btn-outline btn-sm" data-open-modal="guarantor-edit-{{ item.pk }}">แก้ไข</button>
+                      <form method="post" action="{% url 'recruitment:candidate_guarantor_delete' candidate.pk item.pk %}" onsubmit="return confirm('ลบผู้ค้ำประกันนี้?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline btn-sm">ลบ</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="empty-state">ยังไม่มีผู้ค้ำประกัน</p>
+      {% endif %}
+    </article>
+
+    <article class="surface-card related-card">
+      <div class="section-head">
+        <div>
+          <h2 class="surface-card-title">บุคคลอ้างอิง / คนรู้จัก</h2>
+          <p class="page-copy">ไม่บังคับ — เพิ่มได้มากกว่าหนึ่งรายการ</p>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-open-modal="acquaintance-add">เพิ่มคนรู้จัก</button>
+      </div>
+      {% if acquaintances %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ชื่อ</th>
+                <th>เบอร์</th>
+                <th>ความสัมพันธ์</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item, item_form in acquaintance_rows %}
+                <tr>
+                  <td>{{ item.name }}</td>
+                  <td>{{ item.phone_number }}</td>
+                  <td>{{ item.get_relation_display|default:"—" }}</td>
+                  <td>
+                    <div class="table-actions">
+                      <button type="button" class="btn btn-outline btn-sm" data-open-modal="acquaintance-edit-{{ item.pk }}">แก้ไข</button>
+                      <form method="post" action="{% url 'recruitment:candidate_acquaintance_delete' candidate.pk item.pk %}" onsubmit="return confirm('ลบบุคคลอ้างอิงนี้?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline btn-sm">ลบ</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="empty-state">ยังไม่มีบุคคลอ้างอิง</p>
+      {% endif %}
+    </article>
+
+    <div class="surface-card page-actions">
+      <button type="submit" class="btn btn-primary" form="candidate-profile-form">บันทึกโปรไฟล์</button>
+      <a class="btn btn-outline" href="{% url 'recruitment:list_candidate' %}">ยกเลิก</a>
+    </div>
   </div>
 </section>
+
+{% url "recruitment:candidate_study_add" candidate.pk as study_add_url %}
+{% url "recruitment:candidate_guarantor_add" candidate.pk as guarantor_add_url %}
+{% url "recruitment:candidate_acquaintance_add" candidate.pk as acquaintance_add_url %}
+{% include "recruitment/hr/_related_modal.html" with modal_id="study-add" title="เพิ่มประวัติการศึกษา" related_form=study_add_form action=study_add_url %}
+{% include "recruitment/hr/_related_modal.html" with modal_id="guarantor-add" title="เพิ่มผู้ค้ำประกัน" related_form=guarantor_add_form action=guarantor_add_url %}
+{% include "recruitment/hr/_related_modal.html" with modal_id="acquaintance-add" title="เพิ่มบุคคลอ้างอิง / คนรู้จัก" related_form=acquaintance_add_form action=acquaintance_add_url %}
+
+{% for item, item_form in study_rows %}
+  {% url "recruitment:candidate_study_edit" candidate.pk item.pk as item_edit_url %}
+  {% with pk=item.pk|stringformat:"s" %}
+    {% with modal_id="study-edit-"|add:pk %}
+      {% include "recruitment/hr/_related_modal.html" with title="แก้ไขประวัติการศึกษา" related_form=item_form action=item_edit_url modal_id=modal_id %}
+    {% endwith %}
+  {% endwith %}
+{% endfor %}
+{% for item, item_form in guarantor_rows %}
+  {% url "recruitment:candidate_guarantor_edit" candidate.pk item.pk as item_edit_url %}
+  {% with pk=item.pk|stringformat:"s" %}
+    {% with modal_id="guarantor-edit-"|add:pk %}
+      {% include "recruitment/hr/_related_modal.html" with title="แก้ไขผู้ค้ำประกัน" related_form=item_form action=item_edit_url modal_id=modal_id %}
+    {% endwith %}
+  {% endwith %}
+{% endfor %}
+{% for item, item_form in acquaintance_rows %}
+  {% url "recruitment:candidate_acquaintance_edit" candidate.pk item.pk as item_edit_url %}
+  {% with pk=item.pk|stringformat:"s" %}
+    {% with modal_id="acquaintance-edit-"|add:pk %}
+      {% include "recruitment/hr/_related_modal.html" with title="แก้ไขบุคคลอ้างอิง / คนรู้จัก" related_form=item_form action=item_edit_url modal_id=modal_id %}
+    {% endwith %}
+  {% endwith %}
+{% endfor %}
+
+<script>
+  document.querySelectorAll("[data-open-modal]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var dialog = document.getElementById(btn.getAttribute("data-open-modal"));
+      if (dialog) dialog.showModal();
+    });
+  });
+  document.querySelectorAll("[data-close-modal]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var dialog = btn.closest("dialog");
+      if (dialog) dialog.close();
+    });
+  });
+  var autoOpen = document.querySelector("dialog[data-auto-open]");
+  if (autoOpen) autoOpen.showModal();
+</script>
 {% include "recruitment/hr/_address_zip_script.html" %}
 {% endblock %}

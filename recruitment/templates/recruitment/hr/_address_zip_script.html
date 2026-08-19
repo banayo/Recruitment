@@ -12,8 +12,14 @@
     function setPresentLocked(locked) {
       ["js-house", "js-zip", "js-tambon"].forEach(function (cls) {
         const el = field("present", cls);
-        if (el) el.readOnly = locked && cls !== "js-tambon";
-        if (el && cls === "js-tambon") el.disabled = locked;
+        if (!el) return;
+        if (cls === "js-tambon") {
+          el.disabled = false;
+          el.tabIndex = locked ? -1 : 0;
+          el.classList.toggle("is-locked", locked);
+        } else {
+          el.readOnly = locked;
+        }
       });
     }
 
@@ -60,39 +66,51 @@
         const opt = document.createElement("option");
         opt.value = item.tambon;
         opt.textContent = item.tambon;
-        opt.dataset.amphure = item.amphure;
-        opt.dataset.province = item.province;
+        opt.setAttribute("data-amphure", item.amphure || "");
+        opt.setAttribute("data-province", item.province || "");
         if (item.tambon === current) opt.selected = true;
         tambon.appendChild(opt);
       });
       if (matches.length === 1) {
         tambon.value = matches[0].tambon;
+      } else if (current) {
+        tambon.value = current;
       }
-      applyTambon(group);
+      applyTambon(group, matches);
       if (group === "id") copyIdToPresent();
     }
 
-    function applyTambon(group) {
+    function applyTambon(group, matches) {
       const tambon = field(group, "js-tambon");
       const amphure = field(group, "js-amphure");
       const province = field(group, "js-province");
       const selected = tambon && tambon.options[tambon.selectedIndex];
-      if (amphure) amphure.value = selected && selected.dataset.amphure ? selected.dataset.amphure : "";
-      if (province) province.value = selected && selected.dataset.province ? selected.dataset.province : "";
+      if (!selected || !selected.value) return;
+      let amphureName = selected.getAttribute("data-amphure") || selected.dataset.amphure || "";
+      let provinceName = selected.getAttribute("data-province") || selected.dataset.province || "";
+      if ((!amphureName || !provinceName) && matches && matches.length) {
+        const row = matches.filter(function (item) { return item.tambon === selected.value; })[0];
+        if (row) {
+          amphureName = amphureName || row.amphure || "";
+          provinceName = provinceName || row.province || "";
+        }
+      }
+      if (amphure && amphureName) amphure.value = amphureName;
+      if (province && provinceName) province.value = provinceName;
       if (group === "id") copyIdToPresent();
     }
 
     function lookup(group, zipInput) {
       const zip = (zipInput.value || "").trim();
       if (zip.length !== 5) {
-        fillGroup(group, []);
         return;
       }
       fetch(lookupUrl + "?zip=" + encodeURIComponent(zip), { credentials: "same-origin" })
         .then(function (res) { return res.json(); })
         .then(function (data) {
           fillGroup(group, data.matches || []);
-        });
+        })
+        .catch(function () {});
     }
 
     form.querySelectorAll(".js-zip").forEach(function (input) {
@@ -110,6 +128,8 @@
         applyTambon(select.getAttribute("data-group"));
       });
     });
+    applyTambon("id");
+    applyTambon("present");
     const idHouse = field("id", "js-house");
     if (idHouse) {
       idHouse.addEventListener("input", copyIdToPresent);

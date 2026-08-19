@@ -4,80 +4,81 @@
 {% block nav_requisitions %}is-active{% endblock %}
 
 {% block content %}
-<section class="page">
+<div class="page">
   <div class="container narrow">
+    <div class="glass-card">
       <div class="page-header">
-      <div>
-        <h1 class="page-title">คำขอ #{{ requisition.pk }}</h1>
-        <p class="page-copy">
-          <span class="badge badge-{{ requisition.status }}">{{ requisition.get_status_display }}</span>
-          · {{ requisition.get_priority_display }}
-          {% if acting_as_hr %}
-            · <span class="badge badge-pending">HR อนุมัติแทน</span>
-          {% elif is_designated_manager %}
-            · <span class="badge badge-approved">หัวหน้า</span>
+        <div>
+          <h1 class="page-title">คำขอ #{{ requisition.pk }}</h1>
+          <p class="page-copy" style="margin-top: 8px;">
+            <span class="badge badge-{{ requisition.status }}">{{ requisition.get_status_display }}</span>
+            · {{ requisition.get_priority_display }}
+            {% if acting_as_hr %}
+              · <span class="badge badge-pending">HR อนุมัติแทน</span>
+            {% elif is_designated_manager %}
+              · <span class="badge badge-approved">หัวหน้า</span>
+            {% endif %}
+          </p>
+        </div>
+        <div class="cta-group">
+          {% if can_edit %}
+            <a class="btn btn-primary" href="{% url 'recruitment:requisition_edit' requisition.pk %}">แก้ไข</a>
           {% endif %}
-        </p>
+          <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">กลับรายการ</a>
+        </div>
       </div>
-      <div class="cta-group">
-        {% if can_edit %}
-          <a class="btn btn-primary" href="{% url 'recruitment:requisition_edit' requisition.pk %}">แก้ไข</a>
-        {% endif %}
-        <a class="btn btn-outline" href="{% url 'recruitment:requisition_list' %}">กลับรายการ</a>
-      </div>
+
+      <dl class="detail-grid">
+        <div>
+          <dt>ผู้ขอ</dt>
+          <dd>{{ requisition.requester.nickname|default:requisition.requester.person_unid }} ({{ requisition.requester.person_unid }})</dd>
+        </div>
+        <div>
+          <dt>หัวหน้าผู้อนุมัติ</dt>
+          <dd>{{ requisition.approver_unid }}</dd>
+        </div>
+        <div>
+          <dt>จำนวนที่ขอ</dt>
+          <dd>{{ requisition.required_headcount }}</dd>
+        </div>
+        <div>
+          <dt>จำนวนที่อนุมัติ</dt>
+          <dd>{{ requisition.approved_headcount }}</dd>
+        </div>
+        <div>
+          <dt>ชื่อตำแหน่ง</dt>
+          <dd>{{ requisition.position_title|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>ตำแหน่ง (master · HR)</dt>
+          <dd>{{ requisition.position|default:"ยังไม่ผูก" }}</dd>
+        </div>
+        <div class="full">
+          <dt>ละเอียดงาน</dt>
+          <dd>{{ requisition.job_description|linebreaksbr|default:"—" }}</dd>
+        </div>
+        <div class="full">
+          <dt>หมายเหตุหัวหน้า</dt>
+          <dd>{{ requisition.approver_note|linebreaksbr|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt>ซิงก์โควตาแล้ว</dt>
+          <dd>{{ requisition.is_headcount_synced|yesno:"ใช่,ยังไม่" }}</dd>
+        </div>
+        <div>
+          <dt>สร้างเมื่อ</dt>
+          <dd>{{ requisition.created_at|date:"d/m/Y H:i" }}</dd>
+        </div>
+      </dl>
     </div>
 
-
-    <dl class="detail-grid">
-      <div>
-        <dt>ผู้ขอ</dt>
-        <dd>{{ requisition.requester.nickname|default:requisition.requester.person_unid }} ({{ requisition.requester.person_unid }})</dd>
-      </div>
-      <div>
-        <dt>หัวหน้าผู้อนุมัติ</dt>
-        <dd>{{ requisition.approver_unid }}</dd>
-      </div>
-      <div>
-        <dt>จำนวนที่ขอ</dt>
-        <dd>{{ requisition.required_headcount }}</dd>
-      </div>
-      <div>
-        <dt>จำนวนที่อนุมัติ</dt>
-        <dd>{{ requisition.approved_headcount }}</dd>
-      </div>
-      <div>
-        <dt>ชื่อตำแหน่ง</dt>
-        <dd>{{ requisition.position_title|default:"—" }}</dd>
-      </div>
-      <div>
-        <dt>ตำแหน่ง (master · HR)</dt>
-        <dd>{{ requisition.position|default:"ยังไม่ผูก" }}</dd>
-      </div>
-      <div class="full">
-        <dt>ละเอียดงาน</dt>
-        <dd>{{ requisition.job_description|linebreaksbr|default:"—" }}</dd>
-      </div>
-      <div class="full">
-        <dt>หมายเหตุหัวหน้า</dt>
-        <dd>{{ requisition.approver_note|linebreaksbr|default:"—" }}</dd>
-      </div>
-      <div>
-        <dt>ซิงก์โควตาแล้ว</dt>
-        <dd>{{ requisition.is_headcount_synced|yesno:"ใช่,ยังไม่" }}</dd>
-      </div>
-      <div>
-        <dt>สร้างเมื่อ</dt>
-        <dd>{{ requisition.created_at|date:"d/m/Y H:i" }}</dd>
-      </div>
-    </dl>
-
     {% if can_decide %}
-      <div class="panel">
+      <div class="card">
         {% if acting_as_hr %}
-          <h2 class="panel-title">HR · อนุมัติแทนหัวหน้า</h2>
-          <p class="page-copy">คุณไม่ใช่หัวหน้าตามสายของใบนี้ — กำลังอนุมัติแทน {{ requisition.approver_unid|default:"—" }} เป็นขั้นหัวหน้า</p>
+          <h2 class="surface-card-title" style="margin-bottom: 8px;">HR · อนุมัติแทนหัวหน้า</h2>
+          <p class="page-copy" style="margin-bottom: 24px;">คุณไม่ใช่หัวหน้าตามสายของใบนี้ — กำลังอนุมัติแทน {{ requisition.approver_unid|default:"—" }} เป็นขั้นหัวหน้า</p>
         {% else %}
-          <h2 class="panel-title">หัวหน้า · การอนุมัติ</h2>
+          <h2 class="surface-card-title" style="margin-bottom: 24px;">หัวหน้า · การอนุมัติ</h2>
         {% endif %}
         <form method="post" action="{% url 'recruitment:requisition_approve' requisition.pk %}" class="stack-form">
           {% csrf_token %}
@@ -91,15 +92,15 @@
         </form>
         <form method="post" action="{% url 'recruitment:requisition_reject' requisition.pk %}" class="stack-form" style="margin-top: 12px;">
           {% csrf_token %}
-          <button type="submit" class="btn btn-ink">ปฏิเสธ</button>
+          <button type="submit" class="btn btn-outline btn-danger-hover">ปฏิเสธ</button>
         </form>
       </div>
     {% endif %}
 
     {% if is_hr_user and hr_form %}
-      <div class="panel">
-        <h2 class="panel-title">HR · อนุมัติและผูกตำแหน่ง</h2>
-        <p class="page-copy">ขั้นฝ่ายบุคคล — จับคู่ตำแหน่ง master แล้วสถานะจะเป็นฝ่ายบุคคลอนุมัติแล้ว</p>
+      <div class="card">
+        <h2 class="surface-card-title" style="margin-bottom: 8px;">HR · อนุมัติและผูกตำแหน่ง</h2>
+        <p class="page-copy" style="margin-bottom: 24px;">ขั้นฝ่ายบุคคล — จับคู่ตำแหน่ง master แล้วสถานะจะเป็นฝ่ายบุคคลอนุมัติแล้ว</p>
         <form method="post" action="{% url 'recruitment:requisition_hr_map' requisition.pk %}" class="stack-form">
           {% csrf_token %}
           {% for field in hr_form %}
@@ -113,5 +114,5 @@
       </div>
     {% endif %}
   </div>
-</section>
+</div>
 {% endblock %}
